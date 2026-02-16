@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xolo AI — Credit Analytics Dashboard</title>
+    <title>Xolo AI — Credit Analytics Dashboard v2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -87,6 +87,8 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
 .btn-secondary:hover { border-color: var(--accent-indigo); }
 .btn-success { background: var(--accent-emerald); color: #fff; }
 .btn-success:hover { background: #059669; }
+.btn-warning { background: var(--accent-amber); color: #000; }
+.btn-warning:hover { background: #d97706; }
 .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
 .ctrl-spacer { flex: 1; min-width: 1rem; }
 
@@ -96,24 +98,23 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
 .toggle-btn.active { background: var(--accent-indigo); color: #fff; }
 .toggle-btn:hover:not(.active) { color: var(--text-primary); }
 
-/* CHIPS */
-.chip-filters { display: flex; flex-wrap: wrap; gap: .4rem; padding: .75rem 1.25rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 1.25rem; }
-.chip-filters-label { font-size: .72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; width: 100%; margin-bottom: .25rem; }
+/* CHIPS / FILTERS */
+.filter-section { padding: 1rem 1.25rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 1.25rem; }
+.filter-section-title { font-size: .75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .6rem; display: flex; align-items: center; gap: .5rem; }
+.filter-row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 .chip { padding: .3rem .7rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 100px; font-family: var(--font-sans); font-size: .75rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: var(--transition); user-select: none; }
 .chip:hover { border-color: var(--accent-indigo); color: var(--text-primary); }
 .chip.active { background: rgba(99,102,241,.15); border-color: var(--accent-indigo); color: var(--accent-indigo); }
-.chip.chip-all { font-weight: 700; }
+.chip.excluded { background: rgba(244,63,94,.1); border-color: var(--accent-rose); color: var(--accent-rose); text-decoration: line-through; opacity: .7; }
+.filter-info { font-size: .72rem; color: var(--text-muted); margin-top: .5rem; font-style: italic; }
 
 /* METRICS */
-.metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
-.metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; position: relative; transition: var(--transition); }
+.metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.15rem; position: relative; transition: var(--transition); }
 .metric-card:hover { border-color: var(--border-active); transform: translateY(-2px); box-shadow: var(--shadow-card); }
-.metric-label { font-size: .72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; display: flex; align-items: center; gap: .4rem; margin-bottom: .6rem; }
-.metric-value { font-size: 1.85rem; font-weight: 800; letter-spacing: -.03em; font-family: var(--font-mono); }
-.metric-sub { font-size: .78rem; color: var(--text-secondary); margin-top: .3rem; }
-.metric-trend { display: inline-flex; align-items: center; gap: .2rem; font-size: .75rem; font-weight: 600; padding: .15rem .45rem; border-radius: 100px; }
-.metric-trend.up { background: rgba(16,185,129,.12); color: var(--accent-emerald); }
-.metric-trend.down { background: rgba(244,63,94,.12); color: var(--accent-rose); }
+.metric-label { font-size: .7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; display: flex; align-items: center; gap: .4rem; margin-bottom: .5rem; }
+.metric-value { font-size: 1.7rem; font-weight: 800; letter-spacing: -.03em; font-family: var(--font-mono); }
+.metric-sub { font-size: .75rem; color: var(--text-secondary); margin-top: .25rem; }
 .mc-indigo .metric-value { color: var(--accent-indigo); }
 .mc-emerald .metric-value { color: var(--accent-emerald); }
 .mc-amber .metric-value { color: var(--accent-amber); }
@@ -162,11 +163,10 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
 .comparison-table th, .comparison-table td { padding: .65rem .85rem; text-align: center; border-bottom: 1px solid rgba(42,53,80,.5); font-size: .8rem; }
 .comparison-table th { background: var(--bg-surface); font-weight: 600; color: var(--text-muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; }
 
-/* CALIBRATION BANNER */
-.calibration-banner { background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(139,92,246,.08)); border: 1px solid rgba(99,102,241,.3); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; }
-.calibration-banner-title { font-size: .9rem; font-weight: 700; margin-bottom: .5rem; display: flex; align-items: center; gap: .5rem; }
-.calibration-row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; }
-.calibration-info { font-size: .78rem; color: var(--text-secondary); margin-top: .5rem; }
+.badge { display: inline-block; padding: .15rem .5rem; border-radius: 100px; font-size: .7rem; font-weight: 600; }
+.badge-danger { background: rgba(244,63,94,.15); color: var(--accent-rose); }
+.badge-warning { background: rgba(245,158,11,.15); color: var(--accent-amber); }
+.badge-success { background: rgba(16,185,129,.15); color: var(--accent-emerald); }
 
 /* LOADING */
 .loading-overlay { position: fixed; inset: 0; background: rgba(10,14,26,.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
@@ -178,11 +178,6 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
 
 .empty-state { text-align: center; padding: 3rem 2rem; color: var(--text-muted); }
 .empty-state-icon { font-size: 2.5rem; margin-bottom: .75rem; }
-
-.badge { display: inline-block; padding: .15rem .5rem; border-radius: 100px; font-size: .7rem; font-weight: 600; }
-.badge-danger { background: rgba(244,63,94,.15); color: var(--accent-rose); }
-.badge-warning { background: rgba(245,158,11,.15); color: var(--accent-amber); }
-.badge-success { background: rgba(16,185,129,.15); color: var(--accent-emerald); }
 
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
@@ -214,7 +209,7 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
             <div class="logo-mark">X</div>
             <div>
                 <h1>Xolo <span>Credit Analytics</span></h1>
-                <div class="header-subtitle">Dashboard de análisis de costos y créditos Voiceflow</div>
+                <div class="header-subtitle">Dashboard v2 — Datos reales de credit_usage API</div>
             </div>
         </div>
         <div class="header-right">
@@ -225,6 +220,7 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
 
     <nav class="tab-bar" id="tabBar">
         <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="tab-btn" data-tab="models">Modelos LLM</button>
         <button class="tab-btn" data-tab="grade-3">3°</button>
         <button class="tab-btn" data-tab="grade-4">4°</button>
         <button class="tab-btn" data-tab="grade-5">5°</button>
@@ -237,35 +233,6 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
         <button class="tab-btn" data-tab="grade-12">12°</button>
         <button class="tab-btn" data-tab="projections">⚡ Proyecciones</button>
     </nav>
-
-    <!-- CALIBRATION -->
-    <div class="calibration-banner" id="calibrationBanner">
-        <div class="calibration-banner-title">🔧 Calibración de Créditos Reales</div>
-        <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:.75rem;">
-            Ingresa el total de créditos reportado por Voiceflow (Settings → Billing) para calibrar los cálculos.
-            La API de Analytics solo reporta interacciones, usuarios y tokens; no créditos directos.
-            Con el total real, el dashboard distribuye los créditos proporcionalmente por grado y período.
-        </p>
-        <div class="calibration-row">
-            <div class="ctrl-group">
-                <label>Total Créditos VF (Reportado)</label>
-                <input type="number" class="ctrl-input" id="vfReportedCredits" value="1461581" min="0" style="width:180px">
-            </div>
-            <div class="ctrl-group">
-                <label>Plan Total Créditos</label>
-                <input type="number" class="ctrl-input" id="planTotalCredits" value="2400000" min="0" style="width:160px">
-            </div>
-            <div class="ctrl-group">
-                <label>Costo Plan (USD)</label>
-                <input type="number" class="ctrl-input" id="planCostUSD" value="10800" min="0" step="0.01" style="width:120px">
-            </div>
-            <button class="btn btn-primary" onclick="if(STATE.loaded) renderAll()">Recalcular</button>
-        </div>
-        <div class="calibration-info">
-            <span class="info-icon" data-tooltip="Los créditos se distribuyen proporcionalmente entre grados y meses según la cantidad de interacciones. Esto asegura que el total coincida con lo que reporta VF.">i</span>
-            Los créditos se distribuyen proporcionalmente usando las interacciones como peso. Cada interacción puede disparar múltiples llamadas LLM (prompt steps, KB queries, agent steps), por lo que 1 interacción ≠ 1 crédito.
-        </div>
-    </div>
 
     <!-- CONTROLS -->
     <div class="controls-bar">
@@ -289,6 +256,14 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
             <input type="date" class="ctrl-input" id="endDate">
         </div>
         <div class="ctrl-group">
+            <label>Plan Total Créditos</label>
+            <input type="number" class="ctrl-input" id="planTotalCredits" value="2400000" min="0" style="width:150px">
+        </div>
+        <div class="ctrl-group">
+            <label>Costo Plan (USD)</label>
+            <input type="number" class="ctrl-input" id="planCostUSD" value="10800" min="0" step="0.01" style="width:120px">
+        </div>
+        <div class="ctrl-group">
             <label>Unidad</label>
             <div class="toggle-group" id="unitToggle">
                 <button class="toggle-btn active" data-unit="credits">Créditos</button>
@@ -300,61 +275,98 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
         <button class="btn btn-secondary" onclick="exportCSV()">↓ CSV</button>
     </div>
 
+    <!-- MODEL FILTERS -->
+    <div class="filter-section" id="modelFilterSection" style="display:none">
+        <div class="filter-section-title">
+            🔬 Filtros de Modelo LLM
+            <span class="info-icon" data-tooltip="Click en un modelo para excluirlo del cálculo de créditos. Los mensajes y usuarios NO se afectan. Útil para simular costos sin modelos experimentales.">i</span>
+        </div>
+        <div class="filter-row" id="modelChips"></div>
+        <div class="filter-info" id="filterInfo">Todos los modelos activos — mostrando datos completos</div>
+    </div>
+
     <!-- ════════════ DASHBOARD TAB ════════════ -->
     <div class="tab-content active" id="tab-dashboard">
-        <div class="metrics-row" id="globalMetrics">
+        <!-- DOMAIN A: Credits -->
+        <div style="font-size:.7rem;font-weight:700;color:var(--accent-indigo);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Dominio A — Créditos LLM (credit_usage API)</div>
+        <div class="metrics-row" id="creditMetrics">
             <div class="metric-card mc-indigo">
-                <div class="metric-label">Total Créditos Consumidos <span class="info-icon" data-tooltip="Valor real ingresado desde Voiceflow. Se distribuye proporcionalmente entre grados y períodos según las interacciones registradas por la API.">i</span></div>
-                <div class="metric-value" id="kpiTotalCredits">—</div>
-                <div class="metric-sub" id="kpiTotalCreditsSub"></div>
+                <div class="metric-label">Créditos LLM Total <span class="info-icon" data-tooltip="Suma directa de credit_usage API. Datos reales, no estimados.">i</span></div>
+                <div class="metric-value" id="kpiCreditsLLM">—</div>
+                <div class="metric-sub" id="kpiCreditsLLMSub"></div>
             </div>
             <div class="metric-card mc-emerald">
-                <div class="metric-label">Créditos Restantes <span class="info-icon" data-tooltip="Plan total de créditos - créditos consumidos (reportado por VF).">i</span></div>
-                <div class="metric-value" id="kpiRemaining">—</div>
-                <div class="metric-sub" id="kpiRemainingSub"></div>
+                <div class="metric-label">Costo LLM (USD)</div>
+                <div class="metric-value" id="kpiCostUSD">—</div>
+                <div class="metric-sub" id="kpiCostUSDSub"></div>
             </div>
             <div class="metric-card mc-amber">
-                <div class="metric-label">Créditos / Interacción <span class="info-icon" data-tooltip="Total créditos VF ÷ total interacciones. Promedio real de créditos por cada mensaje enviado. Incluye orquestación + LLM + otros procesos.">i</span></div>
-                <div class="metric-value" id="kpiCredPerInt">—</div>
-                <div class="metric-sub" id="kpiCredPerIntSub"></div>
+                <div class="metric-label">% Plan Usado <span class="info-icon" data-tooltip="Créditos LLM / Plan total. No incluye hosting.">i</span></div>
+                <div class="metric-value" id="kpiPlanPct">—</div>
+                <div class="metric-sub" id="kpiPlanPctSub"></div>
             </div>
             <div class="metric-card mc-rose">
-                <div class="metric-label">Burn Rate Mensual <span class="info-icon" data-tooltip="Total créditos VF ÷ meses con actividad. Promedio de créditos consumidos por mes calendario.">i</span></div>
+                <div class="metric-label">Burn Rate Mensual</div>
                 <div class="metric-value" id="kpiBurnRate">—</div>
                 <div class="metric-sub" id="kpiBurnRateSub"></div>
             </div>
+        </div>
+
+        <!-- DOMAIN B: Messaging -->
+        <div style="font-size:.7rem;font-weight:700;color:var(--accent-cyan);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Dominio B — Mensajería (interactions + unique_users API)</div>
+        <div class="metrics-row" id="messagingMetrics">
             <div class="metric-card mc-cyan">
-                <div class="metric-label">Total Interacciones <span class="info-icon" data-tooltip="Mensajes totales registrados por la API de Voiceflow Analytics.">i</span></div>
-                <div class="metric-value" id="kpiTotalMsgs">—</div>
-                <div class="metric-sub" id="kpiTotalMsgsSub"></div>
+                <div class="metric-label">Total Mensajes</div>
+                <div class="metric-value" id="kpiMessages">—</div>
+                <div class="metric-sub" id="kpiMessagesSub"></div>
             </div>
             <div class="metric-card mc-violet">
-                <div class="metric-label">Total Conversaciones <span class="info-icon" data-tooltip="Usuarios únicos por día por proyecto. Cada usuario único en un día se cuenta como una conversación.">i</span></div>
-                <div class="metric-value" id="kpiTotalConvs">—</div>
-                <div class="metric-sub" id="kpiTotalConvsSub"></div>
+                <div class="metric-label">Usuarios Únicos</div>
+                <div class="metric-value" id="kpiUsers">—</div>
+                <div class="metric-sub" id="kpiUsersSub"></div>
             </div>
             <div class="metric-card mc-blue">
-                <div class="metric-label">Créditos / Conversación <span class="info-icon" data-tooltip="Total créditos VF ÷ total conversaciones. Promedio de créditos consumidos por conversación completa.">i</span></div>
-                <div class="metric-value" id="kpiCredPerConv">—</div>
-                <div class="metric-sub" id="kpiCredPerConvSub"></div>
+                <div class="metric-label">Msgs / Usuario <span class="info-icon" data-tooltip="Mensajes ÷ Usuarios. Métrica pura de engagement, no toca créditos.">i</span></div>
+                <div class="metric-value" id="kpiMsgsPerUser">—</div>
+                <div class="metric-sub" id="kpiMsgsPerUserSub"></div>
             </div>
+        </div>
+
+        <!-- COMBINED METRICS -->
+        <div style="font-size:.7rem;font-weight:700;color:var(--accent-amber);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Métricas Conjuntas (A × B)</div>
+        <div class="metrics-row" id="combinedMetrics">
             <div class="metric-card mc-orange">
-                <div class="metric-label">Meses Restantes (Est.) <span class="info-icon" data-tooltip="Créditos restantes ÷ burn rate mensual. Estima cuántos meses durará el saldo al ritmo actual.">i</span></div>
-                <div class="metric-value" id="kpiMonthsLeft">—</div>
-                <div class="metric-sub" id="kpiMonthsLeftSub"></div>
+                <div class="metric-label">Créd. LLM / Mensaje <span class="info-icon" data-tooltip="Créditos LLM ÷ Mensajes. Variable según modelo. Afectado por filtros de modelo.">i</span></div>
+                <div class="metric-value" id="kpiCredPerMsg">—</div>
+                <div class="metric-sub" id="kpiCredPerMsgSub"></div>
+            </div>
+            <div class="metric-card mc-violet">
+                <div class="metric-label">Créd. LLM / Usuario</div>
+                <div class="metric-value" id="kpiCredPerUser">—</div>
+                <div class="metric-sub" id="kpiCredPerUserSub"></div>
+            </div>
+            <div class="metric-card mc-emerald">
+                <div class="metric-label">Gran Total (LLM+Hosting) <span class="info-icon" data-tooltip="Créditos LLM + (Mensajes × 1 crédito hosting). El hosting viene del dominio de mensajería.">i</span></div>
+                <div class="metric-value" id="kpiGrandTotal">—</div>
+                <div class="metric-sub" id="kpiGrandTotalSub"></div>
+            </div>
+            <div class="metric-card mc-rose">
+                <div class="metric-label">Proyección Fin Período</div>
+                <div class="metric-value" id="kpiProjection">—</div>
+                <div class="metric-sub" id="kpiProjectionSub"></div>
             </div>
         </div>
 
         <div class="two-col">
             <div class="chart-panel">
                 <div class="chart-panel-header">
-                    <div class="chart-panel-title">📊 Créditos Mensuales <span class="info-icon" data-tooltip="Créditos del total VF distribuidos proporcionalmente según interacciones por mes.">i</span></div>
+                    <div class="chart-panel-title">📊 Créditos LLM Mensuales</div>
                 </div>
                 <div class="chart-wrap"><canvas id="chartMonthlyCredits"></canvas></div>
             </div>
             <div class="chart-panel">
                 <div class="chart-panel-header">
-                    <div class="chart-panel-title">📈 Tendencia Diaria <span class="info-icon" data-tooltip="Créditos estimados por día con media móvil de 7 días.">i</span></div>
+                    <div class="chart-panel-title">📈 Tendencia Diaria</div>
                 </div>
                 <div class="chart-wrap"><canvas id="chartDailyTrend"></canvas></div>
             </div>
@@ -363,15 +375,15 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
         <div class="two-col">
             <div class="chart-panel">
                 <div class="chart-panel-header">
-                    <div class="chart-panel-title">🏫 Créditos por Grado <span class="info-icon" data-tooltip="Distribución proporcional de créditos VF por grado escolar.">i</span></div>
+                    <div class="chart-panel-title">🏫 Créditos LLM por Grado</div>
                 </div>
                 <div class="chart-wrap"><canvas id="chartByGrade"></canvas></div>
             </div>
             <div class="chart-panel">
                 <div class="chart-panel-header">
-                    <div class="chart-panel-title">🍩 Proporción por Grado <span class="info-icon" data-tooltip="Porcentaje del total que consume cada grado.">i</span></div>
+                    <div class="chart-panel-title">🤖 Créditos por Modelo LLM</div>
                 </div>
-                <div class="chart-wrap"><canvas id="chartGradeDist"></canvas></div>
+                <div class="chart-wrap"><canvas id="chartByModel"></canvas></div>
             </div>
         </div>
 
@@ -383,43 +395,25 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
                 <table class="data-table" id="monthlyTable">
                     <thead><tr>
                         <th>Mes</th>
-                        <th class="text-right">Interacciones</th>
-                        <th class="text-right">Conversaciones</th>
-                        <th class="text-right">Msgs/Conv</th>
-                        <th class="text-right">Créditos (Prop.)</th>
-                        <th class="text-right">Costo (USD)</th>
+                        <th class="text-right">Créditos LLM</th>
+                        <th class="text-right">Mensajes</th>
+                        <th class="text-right">Usuarios</th>
+                        <th class="text-right">Créd/Msg</th>
+                        <th class="text-right">Costo USD</th>
                         <th>Tendencia</th>
                     </tr></thead>
                     <tbody id="monthlyTableBody">
-                        <tr><td colspan="7" class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">Haz clic en "Cargar Datos"</div></td></tr>
+                        <tr><td colspan="7" class="empty-state"><div class="empty-state-icon">📊</div>Haz clic en "Cargar Datos"</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
         <div class="insights-grid" id="insightsGrid"></div>
-
-        <div class="data-table-wrap">
-            <div class="data-table-header">
-                <div class="data-table-title">👤 Costo Estimado por Usuario <span class="info-icon" data-tooltip="Basado en: máx 2 conv/semana, 48 semanas escolares. Usa créditos/conversación real calibrados.">i</span></div>
-            </div>
-            <div style="overflow-x:auto">
-                <table class="data-table" id="perUserTable">
-                    <thead><tr>
-                        <th>Grado</th>
-                        <th class="text-right">Créd./Conv</th>
-                        <th class="text-right">Créd./Semana</th>
-                        <th class="text-right">Créd./Mes</th>
-                        <th class="text-right">Créd./Año</th>
-                        <th class="text-right">$/Semana</th>
-                        <th class="text-right">$/Mes</th>
-                        <th class="text-right">$/Año</th>
-                    </tr></thead>
-                    <tbody id="perUserTableBody"><tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr></tbody>
-                </table>
-            </div>
-        </div>
     </div>
+
+    <!-- MODELS TAB -->
+    <div class="tab-content" id="tab-models"></div>
 
     <!-- GRADE TABS -->
     <div class="tab-content" id="tab-grade-3"></div>
@@ -436,85 +430,43 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
     <!-- PROJECTIONS TAB -->
     <div class="tab-content" id="tab-projections">
         <div class="projection-section">
-            <div class="projection-title">📋 Resumen — Configuración Actual</div>
-            <div class="metrics-row" id="projCurrentMetrics"></div>
+            <div class="projection-title">📐 Proyección con Filtros de Modelo</div>
+            <p style="color:var(--text-secondary);font-size:.82rem;margin-bottom:1rem;">
+                Usa los filtros de modelo (arriba) para excluir modelos experimentales. La proyección se recalcula automáticamente mostrando el costo estimado si solo se usara(n) los modelos no excluidos.
+            </p>
+            <div class="metrics-row" id="projFilteredMetrics"></div>
             <div style="overflow-x:auto;margin-top:1rem">
-                <table class="data-table" id="projCurrentTable">
+                <table class="data-table" id="projFilteredTable">
                     <thead><tr>
                         <th>Grado</th>
-                        <th class="text-right">Créd./Conv (real)</th>
-                        <th class="text-right">Est. Créd./Usuario/Año</th>
-                        <th class="text-right">Est. $/Usuario/Año</th>
+                        <th class="text-right">Créd. LLM (filtrados)</th>
+                        <th class="text-right">Mensajes</th>
+                        <th class="text-right">Créd/Msg (filtrado)</th>
+                        <th class="text-right">Costo USD</th>
                     </tr></thead>
-                    <tbody id="projCurrentTableBody"><tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:2rem">Carga datos primero</td></tr></tbody>
+                    <tbody id="projFilteredTableBody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem">Carga datos primero</td></tr></tbody>
                 </table>
             </div>
         </div>
 
         <div class="projection-section">
-            <div class="projection-title">🔬 Simulador de Modelo Alternativo</div>
+            <div class="projection-title">📋 Planificador de Capacidad</div>
             <p style="color:var(--text-secondary);font-size:.82rem;margin-bottom:1rem;">
-                Estima cuánto costaría si cambiaras a un modelo diferente. Selecciona un modelo y el factor se aplica sobre los créditos actuales considerando la diferencia de tasa por token.
-            </p>
-            <div class="sim-input-row">
-                <div class="ctrl-group">
-                    <label>Modelo a simular</label>
-                    <select class="ctrl-select" id="simModelSelect"></select>
-                </div>
-                <div class="ctrl-group">
-                    <label>Modelo base actual (referencia)</label>
-                    <select class="ctrl-select" id="simBaseModelSelect"></select>
-                </div>
-                <button class="btn btn-primary" onclick="runSimulation()">⚡ Simular</button>
-            </div>
-            <div id="simResults" style="margin-top:1.25rem;display:none;">
-                <div class="data-table-wrap" style="margin-bottom:0">
-                    <div class="data-table-header"><div class="data-table-title">Comparativa: Actual vs Simulado</div></div>
-                    <div style="overflow-x:auto">
-                        <table class="comparison-table" id="simCompTable">
-                            <thead><tr>
-                                <th>Grado</th>
-                                <th>$/Usuario/Año (Actual)</th>
-                                <th>$/Usuario/Año (Simulado)</th>
-                                <th>Δ Ahorro/Año</th>
-                            </tr></thead>
-                            <tbody id="simCompTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="projection-section">
-            <div class="projection-title">📐 Planificador de Capacidad</div>
-            <p style="color:var(--text-secondary);font-size:.82rem;margin-bottom:1rem;">
-                Ingresa usuarios totales y conversaciones/año para estimar el costo total anual.
+                Estima el costo anual basado en el promedio real de créditos LLM por mensaje (respeta filtros de modelo activos).
             </p>
             <div class="sim-input-row">
                 <div class="ctrl-group">
                     <label>Usuarios Totales</label>
-                    <input type="number" class="ctrl-input" id="capGlobalUsers" value="100" min="1" style="width:100px">
+                    <input type="number" class="ctrl-input" id="capUsers" value="100" min="1" style="width:100px">
                 </div>
                 <div class="ctrl-group">
-                    <label>Conv./Año por Usuario</label>
-                    <input type="number" class="ctrl-input" id="capConvsYear" value="80" min="1" style="width:100px">
-                    <span style="font-size:.65rem;color:var(--text-muted)">Máx ~96 (2/sem × 48 sem)</span>
+                    <label>Msgs / Usuario / Año</label>
+                    <input type="number" class="ctrl-input" id="capMsgsYear" value="1000" min="1" style="width:120px">
                 </div>
                 <button class="btn btn-success" onclick="runCapacity()">📊 Calcular</button>
             </div>
             <div id="capResults" style="display:none">
                 <div class="metrics-row" id="capMetrics"></div>
-                <div style="overflow-x:auto;margin-top:1rem">
-                    <table class="comparison-table" id="capTable">
-                        <thead><tr>
-                            <th>Grado</th>
-                            <th class="text-right">Usuarios</th>
-                            <th class="text-right">Créditos/Año</th>
-                            <th class="text-right">Costo/Año (USD)</th>
-                        </tr></thead>
-                        <tbody id="capTableBody"></tbody>
-                    </table>
-                </div>
             </div>
         </div>
     </div>
@@ -526,10 +478,8 @@ body { font-family: var(--font-sans); background: var(--bg-base); color: var(--t
    CONFIGURATION
    ═══════════════════════════════════════════════════════════ */
 const PROXY_URL = "https://voiceflow-analytics.chat-gpt-bc7.workers.dev";
-
-const MAX_CONVS_PER_WEEK = 2;
-const WEEKS_PER_YEAR = 48;
-const MAX_CONVS_PER_YEAR = MAX_CONVS_PER_WEEK * WEEKS_PER_YEAR;
+const COSTO_POR_CREDITO = 0.005;
+const CREDITO_HOSTING = 1; // 1 credit per message (fixed by VoiceFlow)
 
 const PROJECTS = [
     { name:"Xolo 2.0 - 3", grade:3, id:"69648a3142fb1cac823bd719", key:"VF.DM.69648b19774372ae83b64a6f.Gxyvv88zdFVvrfhL" },
@@ -544,74 +494,55 @@ const PROJECTS = [
     { name:"Xolo 2.0 - 12", grade:12, id:"6964948942fb1cac823bd7ab", key:"VF.DM.6964952daeb01b0b69b6a672.axrKSvL4BDs6LUgO" }
 ];
 
-// Credits per 1K tokens for model comparison
-const MODEL_PRICING = {
-    "claude-3.5-haiku":   { vendor:"Anthropic", out:1, in:0.2 },
-    "claude-4.5-haiku":   { vendor:"Anthropic", out:1.25, in:0.25 },
-    "claude-4.5-opus":    { vendor:"Anthropic", out:6.25, in:1.25 },
-    "claude-4-opus":      { vendor:"Anthropic", out:18.75, in:3.75 },
-    "claude-4-sonnet":    { vendor:"Anthropic", out:3.75, in:0.75 },
-    "claude-4.5-sonnet":  { vendor:"Anthropic", out:3.75, in:0.75 },
-    "gemini-2.0-flash":   { vendor:"Google", out:0.1, in:0.025 },
-    "gemini-2.5-flash":   { vendor:"Google", out:0.625, in:0.075 },
-    "gemini-2.5-pro":     { vendor:"Google", out:2.5, in:0.3125 },
-    "llama-3.1-8b":       { vendor:"Groq", out:0.02, in:0.0125 },
-    "llama-3.3-70b":      { vendor:"Groq", out:0.1975, in:0.1475 },
-    "gpt-4o":             { vendor:"OpenAI", out:2.5, in:0.625 },
-    "gpt-4o-mini":        { vendor:"OpenAI", out:0.15, in:0.0375 },
-    "gpt-4.1":            { vendor:"OpenAI", out:2, in:0.5 },
-    "gpt-4.1-mini":       { vendor:"OpenAI", out:0.4, in:0.1 },
-    "gpt-4.1-nano":       { vendor:"OpenAI", out:0.1, in:0.025 },
-    "gpt-5":              { vendor:"OpenAI", out:2.5, in:0.3125 },
-    "gpt-5-mini":         { vendor:"OpenAI", out:0.5, in:0.0625 },
-    "o3-mini":            { vendor:"OpenAI", out:1.1, in:0.275 },
-    "o4-mini":            { vendor:"OpenAI", out:1.1, in:0.275 },
-};
-
-// Estimated credits per message for each model (LLM only, ~500 input tokens, ~350 output tokens)
-const AVG_IN_K = 0.5, AVG_OUT_K = 0.35;
-const MODEL_CRED_PER_MSG = {};
-Object.entries(MODEL_PRICING).forEach(([k, m]) => {
-    MODEL_CRED_PER_MSG[k] = (m.in * AVG_IN_K) + (m.out * AVG_OUT_K);
-});
-
 const GRADE_COLORS = ['#6366f1','#8b5cf6','#a855f7','#c084fc','#34d399','#10b981','#06b6d4','#3b82f6','#f59e0b','#f97316'];
+const MODEL_COLORS = ['#6366f1','#f43f5e','#10b981','#f59e0b','#06b6d4','#8b5cf6','#f97316','#3b82f6','#84cc16','#a855f7','#ec4899','#14b8a6'];
 
 /* ═══════════════════════════════════════════════════════════
-   STATE
+   STATE — Separación estricta de dominios
    ═══════════════════════════════════════════════════════════ */
 let STATE = {
-    rawData: [],
+    // Raw data — immutable after fetch
+    raw: {
+        creditUsage: new Map(),   // Map<projectID, CreditItem[]>
+        interactions: new Map(),  // Map<projectID, InteractionItem[]>
+        uniqueUsers: new Map(),   // Map<projectID, UserItem[]>
+    },
+    // Discovered models from credit_usage
+    discoveredModels: [],
+    // Excluded models (for filtering)
+    excludedModels: new Set(),
+    // Computed — recalculated when filters change
+    computed: null,
+    // UI
     activeTab: "dashboard",
     activeUnit: "credits",
     charts: {},
     loaded: false,
+    dateRange: { start: null, end: null },
 };
 
 /* ═══════════════════════════════════════════════════════════
-   CALIBRATION HELPERS
+   HELPERS
    ═══════════════════════════════════════════════════════════ */
-function getVFCredits() { return parseFloat(document.getElementById('vfReportedCredits').value) || 0; }
 function getPlanTotal() { return parseFloat(document.getElementById('planTotalCredits').value) || 2400000; }
 function getPlanCost()  { return parseFloat(document.getElementById('planCostUSD').value) || 10800; }
 function getCreditToUSD() { return getPlanCost() / getPlanTotal(); }
-
-function getTotalInteractions() {
-    return STATE.rawData.reduce((s, p) => s + p.interactions, 0);
+function fmtNum(n, dec = null) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    if (dec !== null) return n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+    if (Math.abs(n) >= 10_000) return (n / 1_000).toFixed(1) + 'K';
+    return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
-
-/** Real credits per interaction (calibrated) */
-function getCredPerInteraction() {
-    const totalInt = getTotalInteractions();
-    return totalInt > 0 ? getVFCredits() / totalInt : 0;
+function formatVal(credits) {
+    if (STATE.activeUnit === 'cost') return '$' + fmtNum(credits * getCreditToUSD(), 2);
+    return fmtNum(credits);
 }
-
-/** Distribute VF credits proportionally to a project based on its interactions */
-function getProjectCredits(proj) {
-    const totalInt = getTotalInteractions();
-    if (totalInt === 0) return 0;
-    return (proj.interactions / totalInt) * getVFCredits();
-}
+function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+function updateLoadingProgress(t) { document.getElementById('loadingProgress').textContent = t; }
+function setStatus(type, text) { document.getElementById('statusDot').className = 'status-dot ' + type; document.getElementById('statusText').textContent = text; }
+function destroyChart(key) { if (STATE.charts[key]) { STATE.charts[key].destroy(); delete STATE.charts[key]; } }
 
 /* ═══════════════════════════════════════════════════════════
    INIT
@@ -620,40 +551,29 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('startDate').value = '2025-01-05';
 
-    // Populate sim model selects
-    const modelOpts = Object.keys(MODEL_PRICING).map(k =>
-        `<option value="${k}">${k} (${MODEL_CRED_PER_MSG[k].toFixed(3)} créd/msg)</option>`
-    ).join('');
-    document.getElementById('simModelSelect').innerHTML = modelOpts;
-    document.getElementById('simBaseModelSelect').innerHTML = modelOpts;
-    document.getElementById('simBaseModelSelect').value = 'claude-4.5-haiku';
-
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
-
     document.querySelectorAll('#unitToggle .toggle-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('#unitToggle .toggle-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             STATE.activeUnit = btn.dataset.unit;
-            if (STATE.loaded) renderAll();
+            if (STATE.loaded) { recalculate(); renderAll(); }
         });
     });
-
     document.getElementById('periodPreset').addEventListener('change', handlePeriodChange);
     hideLoading();
 });
 
-/* ═══════════════════════════════════════════════════════════
-   TABS
-   ═══════════════════════════════════════════════════════════ */
 function switchTab(tabId) {
     STATE.activeTab = tabId;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
-    if (tabId.startsWith('grade-') && STATE.loaded) {
-        renderGradeTab(parseInt(tabId.split('-')[1]));
+    if (STATE.loaded) {
+        if (tabId.startsWith('grade-')) renderGradeTab(parseInt(tabId.split('-')[1]));
+        if (tabId === 'models') renderModelsTab();
+        if (tabId === 'projections') renderProjectionsTab();
     }
 }
 
@@ -663,7 +583,6 @@ function handlePeriodChange() {
     document.getElementById('customDateStart').style.display = val === 'custom' ? '' : 'none';
     document.getElementById('customDateEnd').style.display = val === 'custom' ? '' : 'none';
     if (val === 'custom') return;
-
     let start;
     switch(val) {
         case 'this_month': start = new Date(today.getFullYear(), today.getMonth(), 1); break;
@@ -681,85 +600,42 @@ function handlePeriodChange() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   API FETCHING
+   API FETCHING — Phase 1 (immutable raw data)
    ═══════════════════════════════════════════════════════════ */
 async function fetchAllPages(project, queryName, startTime, endTime) {
     let allItems = [], cursor = null, hasMore = true, pages = 0;
     while (hasMore && pages < 50) {
         const body = { data: { name: queryName, filter: { projectID: project.id, startTime, endTime, limit: 500 } } };
         if (cursor) body.data.filter.cursor = cursor;
-
-        let resp;
         try {
-            resp = await fetch(`${PROXY_URL}/v2/query/usage`, {
+            const resp = await fetch(`${PROXY_URL}/v2/query/usage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': project.key },
                 body: JSON.stringify(body)
             });
-        } catch (networkErr) {
-            throw new Error(`Red: ${networkErr.message} (${queryName})`);
-        }
-
-        if (!resp.ok) {
-            const text = await resp.text().catch(() => '');
-            throw new Error(`HTTP ${resp.status} en ${queryName}: ${text.substring(0, 200)}`);
-        }
-
-        const data = await resp.json();
-        if (data.result && data.result.items) {
-            allItems = allItems.concat(data.result.items);
-            cursor = data.result.cursor;
-            hasMore = !!cursor && data.result.items.length > 0;
-        } else {
-            hasMore = false;
-        }
+            if (!resp.ok) {
+                const text = await resp.text().catch(() => '');
+                throw new Error(`HTTP ${resp.status}: ${text.substring(0, 200)}`);
+            }
+            const data = await resp.json();
+            if (data.result && data.result.items) {
+                allItems = allItems.concat(data.result.items);
+                cursor = data.result.cursor;
+                hasMore = !!cursor && data.result.items.length > 0;
+            } else { hasMore = false; }
+        } catch (err) { throw new Error(`${queryName}@${project.name}: ${err.message}`); }
         pages++;
     }
     return allItems;
 }
 
 async function fetchProjectData(project, startTime, endTime) {
-    try {
-        const [interactionsData, usersData, tokenData] = await Promise.all([
-            fetchAllPages(project, 'interactions', startTime, endTime),
-            fetchAllPages(project, 'unique_users', startTime, endTime),
-            fetchAllPages(project, 'token_usage', startTime, endTime).catch(() => []),
-        ]);
-
-        const dailyStats = {};
-        interactionsData.forEach(item => {
-            const day = item.period.split('T')[0];
-            if (!dailyStats[day]) dailyStats[day] = { interactions: 0, users: 0, tokens: 0 };
-            dailyStats[day].interactions += item.count;
-        });
-        usersData.forEach(item => {
-            const day = item.period.split('T')[0];
-            if (!dailyStats[day]) dailyStats[day] = { interactions: 0, users: 0, tokens: 0 };
-            dailyStats[day].users += item.count;
-        });
-        tokenData.forEach(item => {
-            const day = item.period.split('T')[0];
-            if (!dailyStats[day]) dailyStats[day] = { interactions: 0, users: 0, tokens: 0 };
-            dailyStats[day].tokens += item.count;
-        });
-
-        const totalInteractions = interactionsData.reduce((s, i) => s + i.count, 0);
-        const totalUsers = usersData.reduce((s, i) => s + i.count, 0);
-        const totalTokens = tokenData.reduce((s, i) => s + i.count, 0);
-
-        return {
-            project: project.name, grade: project.grade, projectId: project.id,
-            interactions: totalInteractions, users: totalUsers, tokens: totalTokens,
-            average: totalUsers > 0 ? totalInteractions / totalUsers : 0,
-            dailyStats,
-        };
-    } catch (err) {
-        console.error(`Fetch error (${project.name}):`, err);
-        return {
-            project: project.name, grade: project.grade, projectId: project.id,
-            interactions: 0, users: 0, tokens: 0, average: 0, dailyStats: {}, error: err.message
-        };
-    }
+    const [creditData, interactionsData, usersData] = await Promise.all([
+        fetchAllPages(project, 'credit_usage', startTime, endTime),
+        fetchAllPages(project, 'interactions', startTime, endTime),
+        fetchAllPages(project, 'unique_users', startTime, endTime),
+    ]);
+    return { projectId: project.id, grade: project.grade, name: project.name, creditData, interactionsData, usersData };
 }
 
 async function fetchAllData() {
@@ -769,183 +645,326 @@ async function fetchAllData() {
 
     const startTime = new Date(startDate).toISOString();
     const endTime = new Date(endDate + 'T23:59:59').toISOString();
+    STATE.dateRange = { start: startDate, end: endDate };
 
     showLoading();
     setStatus('loading', 'Cargando...');
 
     try {
-        const results = [];
+        // Reset raw data
+        STATE.raw.creditUsage = new Map();
+        STATE.raw.interactions = new Map();
+        STATE.raw.uniqueUsers = new Map();
+
+        const errors = [];
         for (let i = 0; i < PROJECTS.length; i++) {
-            updateLoadingProgress(`Proyecto ${i+1}/${PROJECTS.length}: ${PROJECTS[i].name}`);
-            results.push(await fetchProjectData(PROJECTS[i], startTime, endTime));
+            const p = PROJECTS[i];
+            updateLoadingProgress(`Proyecto ${i+1}/${PROJECTS.length}: ${p.name}`);
+            try {
+                const result = await fetchProjectData(p, startTime, endTime);
+                STATE.raw.creditUsage.set(p.id, result.creditData);
+                STATE.raw.interactions.set(p.id, result.interactionsData);
+                STATE.raw.uniqueUsers.set(p.id, result.usersData);
+            } catch (err) {
+                console.error(`Error ${p.name}:`, err);
+                errors.push(p.name);
+                STATE.raw.creditUsage.set(p.id, []);
+                STATE.raw.interactions.set(p.id, []);
+                STATE.raw.uniqueUsers.set(p.id, []);
+            }
         }
 
-        const errors = results.filter(r => r.error);
-        if (errors.length > 0) {
-            console.warn(`${errors.length} proyectos con error:`, errors.map(e => `${e.project}: ${e.error}`));
-        }
+        // Discover models
+        const modelSet = new Set();
+        STATE.raw.creditUsage.forEach(items => items.forEach(item => { if (item.model) modelSet.add(item.model); }));
+        STATE.discoveredModels = [...modelSet].sort();
+        STATE.excludedModels = new Set();
 
-        STATE.rawData = results;
         STATE.loaded = true;
-
-        const totalTokens = results.reduce((s, r) => s + (r.tokens || 0), 0);
-        const totalInteractions = results.reduce((s, r) => s + r.interactions, 0);
-        const totalUsers = results.reduce((s, r) => s + r.users, 0);
-        const tokensPerInt = totalInteractions > 0 ? (totalTokens / totalInteractions).toFixed(0) : '?';
-
-        console.log(`📊 Resumen: ${totalInteractions} interacciones, ${totalUsers} conversaciones, ${totalTokens} tokens (${tokensPerInt} tokens/int)`);
-
-        setStatus(errors.length > 0 ? 'warning' : '', errors.length > 0 ? `${errors.length} errores` : 'Datos cargados');
+        buildModelFilterUI();
+        recalculate();
         renderAll();
+
+        const totalCredItems = [...STATE.raw.creditUsage.values()].reduce((s, arr) => s + arr.length, 0);
+        console.log(`📊 Fetched: ${totalCredItems} credit items, ${STATE.discoveredModels.length} models discovered: ${STATE.discoveredModels.join(', ')}`);
+
+        setStatus(errors.length > 0 ? 'warning' : '', errors.length > 0 ? `${errors.length} errores` : `Datos cargados (${STATE.discoveredModels.length} modelos)`);
     } catch (err) {
-        console.error('Fetch error:', err, JSON.stringify(err));
+        console.error('Fatal fetch error:', err);
         setStatus('error', 'Error');
-        alert('Error al cargar datos: ' + (err.message || String(err)));
+        alert('Error: ' + err.message);
     } finally {
         hideLoading();
     }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   AGGREGATION
+   MODEL FILTER UI
    ═══════════════════════════════════════════════════════════ */
-function aggregateDaily(grade = null) {
-    const daily = {};
-    STATE.rawData.forEach(proj => {
-        if (grade !== null && proj.grade !== grade) return;
-        Object.entries(proj.dailyStats).forEach(([day, s]) => {
-            if (!daily[day]) daily[day] = { interactions: 0, users: 0, tokens: 0 };
-            daily[day].interactions += s.interactions;
-            daily[day].users += s.users;
-            daily[day].tokens += (s.tokens || 0);
+function buildModelFilterUI() {
+    const section = document.getElementById('modelFilterSection');
+    section.style.display = STATE.discoveredModels.length > 0 ? '' : 'none';
+
+    const container = document.getElementById('modelChips');
+    container.innerHTML = STATE.discoveredModels.map(model => {
+        // Count credits for this model
+        let credits = 0;
+        STATE.raw.creditUsage.forEach(items => items.forEach(item => {
+            if (item.model === model) credits += item.count;
+        }));
+        return `<div class="chip active" data-model="${model}" onclick="toggleModel('${model}', this)">${model} (${fmtNum(credits)})</div>`;
+    }).join('');
+
+    updateFilterInfo();
+}
+
+function toggleModel(model, el) {
+    if (STATE.excludedModels.has(model)) {
+        STATE.excludedModels.delete(model);
+        el.className = 'chip active';
+    } else {
+        // Don't allow excluding ALL models
+        if (STATE.excludedModels.size >= STATE.discoveredModels.length - 1) {
+            alert('Debe quedar al menos un modelo activo.');
+            return;
+        }
+        STATE.excludedModels.add(model);
+        el.className = 'chip excluded';
+    }
+    updateFilterInfo();
+    recalculate();
+    renderAll();
+}
+
+function updateFilterInfo() {
+    const info = document.getElementById('filterInfo');
+    if (STATE.excludedModels.size === 0) {
+        info.textContent = 'Todos los modelos activos — mostrando datos completos';
+    } else {
+        const active = STATE.discoveredModels.filter(m => !STATE.excludedModels.has(m));
+        info.textContent = `Modelos activos: ${active.join(', ')} — ${STATE.excludedModels.size} modelo(s) excluido(s) de créditos`;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PHASE 2 — CALCULATION ENGINE (Pure, no API calls)
+
+   Applies model filters to Domain A only.
+   Domain B (messaging) is never filtered.
+   ═══════════════════════════════════════════════════════════ */
+function recalculate() {
+    const C = {}; // computed object
+
+    // ───────── DOMAIN A: Credits (filtered) ─────────
+    C.credits = { total: 0, byProject: new Map(), byModel: new Map(), byMonth: new Map(), byDay: new Map(), byMonthAndModel: new Map(), topNodes: [] };
+
+    // Also keep unfiltered total for comparison
+    C.creditsUnfiltered = 0;
+
+    const nodeMap = new Map(); // nodeID -> credits
+
+    STATE.raw.creditUsage.forEach((items, projectId) => {
+        let projTotal = 0;
+        items.forEach(item => {
+            C.creditsUnfiltered += item.count;
+
+            // Apply model filter
+            if (STATE.excludedModels.has(item.model)) return;
+
+            const count = item.count;
+            projTotal += count;
+            C.credits.total += count;
+
+            // By model
+            const model = item.model || 'unknown';
+            if (!C.credits.byModel.has(model)) C.credits.byModel.set(model, { input: 0, output: 0, total: 0 });
+            const mData = C.credits.byModel.get(model);
+            mData.total += count;
+            if (item.type === 'llm-input') mData.input += count;
+            else if (item.type === 'llm-output') mData.output += count;
+
+            // By month
+            const month = item.period.substring(0, 7);
+            C.credits.byMonth.set(month, (C.credits.byMonth.get(month) || 0) + count);
+
+            // By day
+            const day = item.period.split('T')[0];
+            C.credits.byDay.set(day, (C.credits.byDay.get(day) || 0) + count);
+
+            // By month+model
+            if (!C.credits.byMonthAndModel.has(month)) C.credits.byMonthAndModel.set(month, new Map());
+            const mm = C.credits.byMonthAndModel.get(month);
+            mm.set(model, (mm.get(model) || 0) + count);
+
+            // Top nodes
+            const nk = item.nodeID || 'unknown';
+            nodeMap.set(nk, (nodeMap.get(nk) || 0) + count);
         });
+        C.credits.byProject.set(projectId, projTotal);
     });
-    return daily;
-}
 
-function aggregateMonthly(grade = null) {
-    const daily = aggregateDaily(grade);
-    const monthly = {};
-    Object.entries(daily).forEach(([day, s]) => {
-        const m = day.substring(0, 7);
-        if (!monthly[m]) monthly[m] = { interactions: 0, users: 0, tokens: 0 };
-        monthly[m].interactions += s.interactions;
-        monthly[m].users += s.users;
-        monthly[m].tokens += (s.tokens || 0);
+    // Sort top nodes
+    C.credits.topNodes = [...nodeMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, credits]) => ({ nodeID: id, credits }));
+
+    // Derived credit metrics
+    const planTotal = getPlanTotal();
+    C.credits.costUSD = C.credits.total * COSTO_POR_CREDITO;
+    C.credits.planPercent = planTotal > 0 ? (C.credits.total / planTotal) * 100 : 0;
+
+    const months = [...C.credits.byMonth.keys()].sort();
+    C.credits.burnRateMonthly = months.length > 0 ? C.credits.total / months.length : 0;
+
+    // ───────── DOMAIN B: Messaging (never filtered) ─────────
+    C.messaging = { totalMessages: 0, totalUsers: 0, messagesByProject: new Map(), usersByProject: new Map(), messagesByMonth: new Map(), messagesByDay: new Map(), usersByMonth: new Map(), usersByDay: new Map() };
+
+    STATE.raw.interactions.forEach((items, projectId) => {
+        let projMsgs = 0;
+        items.forEach(item => {
+            projMsgs += item.count;
+            C.messaging.totalMessages += item.count;
+            const month = item.period.substring(0, 7);
+            C.messaging.messagesByMonth.set(month, (C.messaging.messagesByMonth.get(month) || 0) + item.count);
+            const day = item.period.split('T')[0];
+            C.messaging.messagesByDay.set(day, (C.messaging.messagesByDay.get(day) || 0) + item.count);
+        });
+        C.messaging.messagesByProject.set(projectId, projMsgs);
     });
-    return monthly;
-}
 
-function getTotals(grade = null) {
-    let interactions = 0, users = 0, tokens = 0;
-    STATE.rawData.forEach(p => {
-        if (grade !== null && p.grade !== grade) return;
-        interactions += p.interactions;
-        users += p.users;
-        tokens += (p.tokens || 0);
+    STATE.raw.uniqueUsers.forEach((items, projectId) => {
+        let projUsers = 0;
+        items.forEach(item => {
+            projUsers += item.count;
+            C.messaging.totalUsers += item.count;
+            const month = item.period.substring(0, 7);
+            C.messaging.usersByMonth.set(month, (C.messaging.usersByMonth.get(month) || 0) + item.count);
+            const day = item.period.split('T')[0];
+            C.messaging.usersByDay.set(day, (C.messaging.usersByDay.get(day) || 0) + item.count);
+        });
+        C.messaging.usersByProject.set(projectId, projUsers);
     });
-    return { interactions, users, tokens, average: users > 0 ? interactions / users : 0 };
-}
 
-function formatVal(credits) {
-    if (STATE.activeUnit === 'cost') return '$' + fmtNum(credits * getCreditToUSD(), 2);
-    return fmtNum(credits);
+    C.messaging.msgsPerUser = C.messaging.totalUsers > 0 ? C.messaging.totalMessages / C.messaging.totalUsers : 0;
+
+    // ───────── COMBINED METRICS ─────────
+    C.combined = {};
+    C.combined.credPerMessage = C.messaging.totalMessages > 0 ? C.credits.total / C.messaging.totalMessages : 0;
+    C.combined.credPerUser = C.messaging.totalUsers > 0 ? C.credits.total / C.messaging.totalUsers : 0;
+    C.combined.hostingTotal = C.messaging.totalMessages * CREDITO_HOSTING;
+    C.combined.grandTotal = C.credits.total + C.combined.hostingTotal;
+    C.combined.grandTotalUSD = C.combined.grandTotal * COSTO_POR_CREDITO;
+
+    // Per-project combined
+    C.combined.credPerMsgByProject = new Map();
+    C.combined.credPerUserByProject = new Map();
+    PROJECTS.forEach(p => {
+        const cred = C.credits.byProject.get(p.id) || 0;
+        const msgs = C.messaging.messagesByProject.get(p.id) || 0;
+        const users = C.messaging.usersByProject.get(p.id) || 0;
+        C.combined.credPerMsgByProject.set(p.id, msgs > 0 ? cred / msgs : 0);
+        C.combined.credPerUserByProject.set(p.id, users > 0 ? cred / users : 0);
+    });
+
+    // Projection
+    if (STATE.dateRange.start && STATE.dateRange.end) {
+        const dayStart = new Date(STATE.dateRange.start);
+        const dayEnd = new Date(STATE.dateRange.end);
+        const daysElapsed = Math.max(1, (dayEnd - dayStart) / (1000 * 60 * 60 * 24));
+        const dailyRate = C.credits.total / daysElapsed;
+        // Assume billing period = 30 days for projection
+        C.combined.projectionLinear = dailyRate * 30;
+
+        // Weighted: last 7 days
+        const sortedDays = [...C.credits.byDay.entries()].sort((a,b) => a[0].localeCompare(b[0]));
+        const last7 = sortedDays.slice(-7);
+        if (last7.length > 0) {
+            const recent7Total = last7.reduce((s, [,v]) => s + v, 0);
+            const dailyRecent = recent7Total / last7.length;
+            const daysRemaining = Math.max(0, 30 - daysElapsed);
+            C.combined.projectionWeighted = C.credits.total + (dailyRecent * daysRemaining);
+        } else {
+            C.combined.projectionWeighted = C.combined.projectionLinear;
+        }
+    }
+
+    STATE.computed = C;
 }
 
 /* ═══════════════════════════════════════════════════════════
    RENDER ALL
    ═══════════════════════════════════════════════════════════ */
 function renderAll() {
-    renderGlobalMetrics();
-    renderMonthlyTable();
-    renderCharts();
-    renderInsights();
-    renderPerUserTable();
-    renderProjectionsCurrent();
-
-    if (STATE.activeTab.startsWith('grade-')) {
-        renderGradeTab(parseInt(STATE.activeTab.split('-')[1]));
-    }
+    if (!STATE.computed) return;
+    renderDashboard();
+    if (STATE.activeTab === 'models') renderModelsTab();
+    if (STATE.activeTab.startsWith('grade-')) renderGradeTab(parseInt(STATE.activeTab.split('-')[1]));
+    if (STATE.activeTab === 'projections') renderProjectionsTab();
 }
 
 /* ═══════════════════════════════════════════════════════════
-   GLOBAL METRICS
+   DASHBOARD RENDER
    ═══════════════════════════════════════════════════════════ */
-function renderGlobalMetrics() {
-    const totals = getTotals();
-    const vfCredits = getVFCredits();
-    const planTotal = getPlanTotal();
-    const creditToUSD = getCreditToUSD();
-    const remaining = planTotal - vfCredits;
-    const pctUsed = planTotal > 0 ? (vfCredits / planTotal * 100) : 0;
-    const credPerInt = getCredPerInteraction();
-
-    const monthly = aggregateMonthly();
-    const months = Object.keys(monthly);
-    const numMonths = months.length;
-    const avgBurn = numMonths > 0 ? vfCredits / numMonths : 0;
-    const monthsLeft = avgBurn > 0 ? remaining / avgBurn : Infinity;
-    const credPerConv = totals.users > 0 ? vfCredits / totals.users : 0;
-
+function renderDashboard() {
+    const C = STATE.computed;
     const set = (id, val, sub) => {
         const el = document.getElementById(id);
         if (el) el.textContent = val;
         const s = document.getElementById(id + 'Sub');
-        if (s && sub) s.textContent = sub;
+        if (s && sub !== undefined) s.textContent = sub;
     };
 
-    set('kpiTotalCredits', formatVal(vfCredits), `${pctUsed.toFixed(1)}% del plan utilizado`);
-    set('kpiRemaining', formatVal(remaining), remaining < 0 ? '⚠️ Plan excedido' : `${(100 - pctUsed).toFixed(1)}% disponible`);
-    set('kpiCredPerInt', fmtNum(credPerInt, 2), `créditos promedio por interacción`);
-    set('kpiBurnRate', formatVal(avgBurn), `promedio mensual (créditos)`);
-    set('kpiTotalMsgs', fmtNum(totals.interactions), `interacciones totales`);
-    set('kpiTotalConvs', fmtNum(totals.users), `conversaciones únicas`);
-    set('kpiCredPerConv', fmtNum(credPerConv, 1), `créditos/conversación promedio`);
-    set('kpiMonthsLeft', monthsLeft === Infinity ? '∞' : fmtNum(monthsLeft, 1), avgBurn > 0 ? `al ritmo de ${fmtNum(avgBurn, 0)} créd/mes` : '');
+    // Domain A
+    const filterNote = STATE.excludedModels.size > 0 ? ` (${STATE.excludedModels.size} modelo(s) excluido(s))` : '';
+    set('kpiCreditsLLM', formatVal(C.credits.total), `datos directos de credit_usage API${filterNote}`);
+    set('kpiCostUSD', '$' + fmtNum(C.credits.costUSD, 2), `a $${COSTO_POR_CREDITO}/crédito`);
+    set('kpiPlanPct', C.credits.planPercent.toFixed(1) + '%', C.credits.planPercent >= 90 ? '⚠️ Uso crítico' : C.credits.planPercent >= 75 ? 'Atención' : 'Normal');
+    set('kpiBurnRate', formatVal(C.credits.burnRateMonthly), 'promedio mensual');
 
-    // Token info
-    if (totals.tokens > 0) {
-        set('kpiTokensTotal', fmtNum(totals.tokens), `${totals.interactions > 0 ? fmtNum(totals.tokens / totals.interactions, 0) : '?'} tokens/interacción`);
-    }
+    // Domain B
+    set('kpiMessages', fmtNum(C.messaging.totalMessages), 'mensajes de estudiantes');
+    set('kpiUsers', fmtNum(C.messaging.totalUsers), 'usuarios únicos (suma por proyecto)');
+    set('kpiMsgsPerUser', fmtNum(C.messaging.msgsPerUser, 1), 'engagement promedio');
 
-    const remEl = document.getElementById('kpiRemaining');
-    if (remEl) remEl.style.color = remaining < 0 ? 'var(--accent-rose)' : remaining < 200000 ? 'var(--accent-amber)' : 'var(--accent-emerald)';
-    const mlEl = document.getElementById('kpiMonthsLeft');
-    if (mlEl) mlEl.style.color = monthsLeft < 2 ? 'var(--accent-rose)' : monthsLeft < 6 ? 'var(--accent-amber)' : 'var(--accent-orange)';
+    // Combined
+    set('kpiCredPerMsg', fmtNum(C.combined.credPerMessage, 2), `créditos LLM promedio por mensaje${filterNote}`);
+    set('kpiCredPerUser', fmtNum(C.combined.credPerUser, 1), 'créditos LLM por usuario');
+    set('kpiGrandTotal', formatVal(C.combined.grandTotal), `LLM: ${fmtNum(C.credits.total)} + Hosting: ${fmtNum(C.combined.hostingTotal)}`);
+    set('kpiProjection', formatVal(C.combined.projectionWeighted || 0), 'proyección ponderada (30 días)');
+
+    // Color plan percent
+    const pctEl = document.getElementById('kpiPlanPct');
+    if (pctEl) pctEl.style.color = C.credits.planPercent >= 90 ? 'var(--accent-rose)' : C.credits.planPercent >= 75 ? 'var(--accent-amber)' : 'var(--accent-amber)';
+
+    renderMonthlyTable();
+    renderCharts();
+    renderInsights();
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MONTHLY TABLE
-   ═══════════════════════════════════════════════════════════ */
 function renderMonthlyTable() {
-    const monthly = aggregateMonthly();
-    const months = Object.keys(monthly).sort();
+    const C = STATE.computed;
+    // Merge all months from both domains
+    const allMonths = new Set([...C.credits.byMonth.keys(), ...C.messaging.messagesByMonth.keys()]);
+    const months = [...allMonths].sort();
     const tbody = document.getElementById('monthlyTableBody');
-    const totalInt = getTotalInteractions();
-    const vfCredits = getVFCredits();
-    const creditToUSD = getCreditToUSD();
-    const totals = getTotals();
-    const hasTokens = totals.tokens > 0;
 
     if (months.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr>';
         return;
     }
 
     let prevCredits = null;
     tbody.innerHTML = months.map(month => {
-        const d = monthly[month];
-        const credits = totalInt > 0 ? (d.interactions / totalInt) * vfCredits : 0;
-        const cost = credits * creditToUSD;
-        const msgsPerConv = d.users > 0 ? (d.interactions / d.users).toFixed(1) : '0';
-        const tokensCol = hasTokens ? `<td class="mono text-right" style="color:var(--accent-cyan)">${fmtNum(d.tokens || 0)}</td>` : '';
+        const credits = C.credits.byMonth.get(month) || 0;
+        const msgs = C.messaging.messagesByMonth.get(month) || 0;
+        const users = C.messaging.usersByMonth.get(month) || 0;
+        const credPerMsg = msgs > 0 ? (credits / msgs).toFixed(2) : '—';
+        const costUSD = credits * COSTO_POR_CREDITO;
 
         let trend = '—';
         if (prevCredits !== null) {
             const diff = credits - prevCredits;
             const pct = prevCredits > 0 ? (diff / prevCredits * 100).toFixed(1) : 0;
-            trend = diff > 0 ? `<span class="metric-trend up">↑ +${pct}%</span>` :
-                    diff < 0 ? `<span class="metric-trend down">↓ ${pct}%</span>` :
+            trend = diff > 0 ? `<span style="color:var(--accent-rose)">↑ +${pct}%</span>` :
+                    diff < 0 ? `<span style="color:var(--accent-emerald)">↓ ${pct}%</span>` :
                     `<span style="color:var(--text-muted)">= 0%</span>`;
         }
         prevCredits = credits;
@@ -953,12 +972,11 @@ function renderMonthlyTable() {
         const monthName = new Date(month + '-01').toLocaleDateString('es-MX', { year:'numeric', month:'long' });
         return `<tr>
             <td>${monthName}</td>
-            <td class="mono text-right">${fmtNum(d.interactions)}</td>
-            <td class="mono text-right">${fmtNum(d.users)}</td>
-            <td class="mono text-right">${msgsPerConv}</td>
-            ${tokensCol}
             <td class="mono text-right" style="color:var(--accent-indigo)">${fmtNum(credits, 0)}</td>
-            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(cost, 2)}</td>
+            <td class="mono text-right">${fmtNum(msgs)}</td>
+            <td class="mono text-right">${fmtNum(users)}</td>
+            <td class="mono text-right" style="color:var(--accent-amber)">${credPerMsg}</td>
+            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(costUSD, 2)}</td>
             <td>${trend}</td>
         </tr>`;
     }).join('');
@@ -967,258 +985,271 @@ function renderMonthlyTable() {
 /* ═══════════════════════════════════════════════════════════
    CHARTS
    ═══════════════════════════════════════════════════════════ */
-function destroyChart(key) { if (STATE.charts[key]) { STATE.charts[key].destroy(); delete STATE.charts[key]; } }
-
 const CHART_DEFAULTS = {
     responsive: true, maintainAspectRatio: false,
     plugins: {
         legend: { labels: { color: '#8892a8', font: { family: "'DM Sans'", size: 11 }, boxWidth: 12, padding: 12 } },
-        tooltip: { backgroundColor: '#1a2236', borderColor: '#2a3550', borderWidth: 1, titleColor: '#e8ecf4', bodyColor: '#8892a8', titleFont: { family: "'DM Sans'", weight: 'bold' }, bodyFont: { family: "'JetBrains Mono'", size: 11 }, padding: 10, cornerRadius: 8 }
+        tooltip: { backgroundColor: '#1a2236', borderColor: '#2a3550', borderWidth: 1, titleColor: '#e8ecf4', bodyColor: '#8892a8', padding: 10, cornerRadius: 8 }
     },
     scales: {
-        x: { ticks: { color: '#5a6478', font: { family: "'DM Sans'", size: 10 } }, grid: { color: 'rgba(42,53,80,.3)' } },
-        y: { ticks: { color: '#5a6478', font: { family: "'JetBrains Mono'", size: 10 } }, grid: { color: 'rgba(42,53,80,.3)' } }
+        x: { ticks: { color: '#5a6478', font: { size: 10 } }, grid: { color: 'rgba(42,53,80,.3)' } },
+        y: { ticks: { color: '#5a6478', font: { size: 10 } }, grid: { color: 'rgba(42,53,80,.3)' } }
     }
 };
 
 function renderCharts() {
     if (typeof Chart === 'undefined') {
-        console.error('Chart.js no cargó. Intentando cargar de forma alternativa...');
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js';
-        script.onload = () => { console.log('Chart.js cargado (fallback)'); renderCharts(); };
-        script.onerror = () => console.error('Chart.js no se pudo cargar de ningún CDN.');
+        script.onload = () => renderCharts();
         document.head.appendChild(script);
         return;
     }
-    try { renderChartMonthlyCredits(); } catch(e) { console.error('Chart monthly error:', e); }
-    try { renderChartDailyTrend(); } catch(e) { console.error('Chart daily error:', e); }
-    try { renderChartByGrade(); } catch(e) { console.error('Chart grade error:', e); }
-    try { renderChartGradeDist(); } catch(e) { console.error('Chart dist error:', e); }
-}
+    const C = STATE.computed;
 
-function renderChartMonthlyCredits() {
+    // Monthly Credits Bar
     destroyChart('monthlyCredits');
-    const monthly = aggregateMonthly();
-    const months = Object.keys(monthly).sort();
-    if (months.length === 0) return;
-    const totalInt = getTotalInteractions();
-    const vfCredits = getVFCredits();
+    const months = [...C.credits.byMonth.keys()].sort();
+    if (months.length > 0) {
+        const ctx = document.getElementById('chartMonthlyCredits').getContext('2d');
+        STATE.charts.monthlyCredits = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: months.map(m => new Date(m + '-01').toLocaleDateString('es-MX', { month: 'short', year: '2-digit' })),
+                datasets: [{ label: 'Créditos LLM', data: months.map(m => C.credits.byMonth.get(m) || 0), backgroundColor: '#6366f1cc', borderColor: '#6366f1', borderWidth: 1 }]
+            },
+            options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } } }
+        });
+    }
 
-    const ctx = document.getElementById('chartMonthlyCredits').getContext('2d');
-    STATE.charts.monthlyCredits = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: months.map(m => new Date(m + '-01').toLocaleDateString('es-MX', { month: 'short', year: '2-digit' })),
-            datasets: [{
-                label: 'Créditos',
-                data: months.map(m => totalInt > 0 ? (monthly[m].interactions / totalInt) * vfCredits : 0),
-                backgroundColor: '#6366f1cc', borderColor: '#6366f1', borderWidth: 1,
-            }]
-        },
-        options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } } }
-    });
-}
-
-function renderChartDailyTrend() {
+    // Daily Trend
     destroyChart('dailyTrend');
-    const daily = aggregateDaily();
-    const days = Object.keys(daily).sort();
-    if (days.length === 0) return;
-    const totalInt = getTotalInteractions();
-    const vfCredits = getVFCredits();
-    const credPerInt = totalInt > 0 ? vfCredits / totalInt : 0;
+    const days = [...C.credits.byDay.keys()].sort();
+    if (days.length > 0) {
+        const values = days.map(d => C.credits.byDay.get(d) || 0);
+        const ma7 = values.map((_, i) => {
+            const sl = values.slice(Math.max(0, i - 6), i + 1);
+            return sl.reduce((a, b) => a + b, 0) / sl.length;
+        });
+        const ctx = document.getElementById('chartDailyTrend').getContext('2d');
+        STATE.charts.dailyTrend = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: days.map(d => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })),
+                datasets: [
+                    { label: 'Créditos/día', data: values, borderColor: '#6366f180', backgroundColor: '#6366f115', fill: true, tension: 0.3, pointRadius: 1, borderWidth: 1.5 },
+                    { label: 'Media móvil 7d', data: ma7, borderColor: '#f59e0b', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4, borderDash: [5, 3] }
+                ]
+            },
+            options: CHART_DEFAULTS
+        });
+    }
 
-    const values = days.map(d => daily[d].interactions * credPerInt);
-    const ma7 = values.map((_, i) => {
-        const sl = values.slice(Math.max(0, i - 6), i + 1);
-        return sl.reduce((a, b) => a + b, 0) / sl.length;
-    });
-
-    const ctx = document.getElementById('chartDailyTrend').getContext('2d');
-    STATE.charts.dailyTrend = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: days.map(d => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })),
-            datasets: [
-                { label: 'Créditos/día', data: values, borderColor: '#6366f180', backgroundColor: '#6366f115', fill: true, tension: 0.3, pointRadius: 1, borderWidth: 1.5 },
-                { label: 'Media móvil 7d', data: ma7, borderColor: '#f59e0b', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4, borderDash: [5, 3] }
-            ]
-        },
-        options: CHART_DEFAULTS
-    });
-}
-
-function renderChartByGrade() {
+    // By Grade
     destroyChart('byGrade');
-    const totalInt = getTotalInteractions();
-    const vfCredits = getVFCredits();
-    const labels = [], data = [];
+    const gradeLabels = [], gradeData = [];
     PROJECTS.forEach((p, i) => {
-        const proj = STATE.rawData.find(r => r.grade === p.grade);
-        if (!proj) return;
-        labels.push(`${p.grade}°`);
-        data.push(totalInt > 0 ? (proj.interactions / totalInt) * vfCredits : 0);
+        gradeLabels.push(`${p.grade}°`);
+        gradeData.push(C.credits.byProject.get(p.id) || 0);
     });
-
-    const ctx = document.getElementById('chartByGrade').getContext('2d');
-    STATE.charts.byGrade = new Chart(ctx, {
+    const ctxG = document.getElementById('chartByGrade').getContext('2d');
+    STATE.charts.byGrade = new Chart(ctxG, {
         type: 'bar',
-        data: { labels, datasets: [{ label: 'Créditos', data, backgroundColor: GRADE_COLORS.map(c => c + 'cc'), borderColor: GRADE_COLORS, borderWidth: 1 }] },
+        data: { labels: gradeLabels, datasets: [{ label: 'Créditos LLM', data: gradeData, backgroundColor: GRADE_COLORS.map(c => c + 'cc'), borderColor: GRADE_COLORS, borderWidth: 1 }] },
         options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } } }
     });
-}
 
-function renderChartGradeDist() {
-    destroyChart('gradeDist');
-    const totalInt = getTotalInteractions();
-    const vfCredits = getVFCredits();
-    const labels = [], data = [];
-    PROJECTS.forEach((p, i) => {
-        const proj = STATE.rawData.find(r => r.grade === p.grade);
-        if (!proj || proj.interactions === 0) return;
-        labels.push(`Grado ${p.grade}°`);
-        data.push(totalInt > 0 ? (proj.interactions / totalInt) * vfCredits : 0);
+    // By Model (Doughnut)
+    destroyChart('byModel');
+    const modelLabels = [], modelData = [], modelColors = [];
+    let mi = 0;
+    C.credits.byModel.forEach((data, model) => {
+        modelLabels.push(model);
+        modelData.push(data.total);
+        modelColors.push(MODEL_COLORS[mi % MODEL_COLORS.length]);
+        mi++;
     });
-
-    const ctx = document.getElementById('chartGradeDist').getContext('2d');
-    STATE.charts.gradeDist = new Chart(ctx, {
-        type: 'doughnut',
-        data: { labels, datasets: [{ data, backgroundColor: GRADE_COLORS, borderColor: '#1a2236', borderWidth: 2 }] },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'right', labels: { color: '#8892a8', font: { family: "'DM Sans'", size: 11 }, padding: 10, boxWidth: 12 } },
-                tooltip: { ...CHART_DEFAULTS.plugins.tooltip, callbacks: { label: ctx => { const pct = (ctx.raw / data.reduce((a,b)=>a+b,0) * 100).toFixed(1); return `${ctx.label}: ${fmtNum(ctx.raw,0)} créd (${pct}%)`; } } }
+    if (modelLabels.length > 0) {
+        const ctxM = document.getElementById('chartByModel').getContext('2d');
+        STATE.charts.byModel = new Chart(ctxM, {
+            type: 'doughnut',
+            data: { labels: modelLabels, datasets: [{ data: modelData, backgroundColor: modelColors, borderColor: '#1a2236', borderWidth: 2 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#8892a8', font: { size: 11 }, padding: 8, boxWidth: 12 } },
+                    tooltip: { ...CHART_DEFAULTS.plugins.tooltip, callbacks: { label: ctx => { const sum = modelData.reduce((a,b)=>a+b,0); const pct = sum > 0 ? (ctx.raw/sum*100).toFixed(1) : 0; return `${ctx.label}: ${fmtNum(ctx.raw,0)} (${pct}%)`; } } }
+                }
             }
-        }
-    });
+        });
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════
    INSIGHTS
    ═══════════════════════════════════════════════════════════ */
 function renderInsights() {
-    const totals = getTotals();
-    const vfCredits = getVFCredits();
+    const C = STATE.computed;
     const planTotal = getPlanTotal();
-    const remaining = planTotal - vfCredits;
-    const creditToUSD = getCreditToUSD();
-    const credPerInt = getCredPerInteraction();
+    const remaining = planTotal - C.credits.total;
 
-    const monthly = aggregateMonthly();
-    const months = Object.keys(monthly).sort();
-    const numMonths = months.length;
-    const avgBurn = numMonths > 0 ? vfCredits / numMonths : 0;
+    // Top model
+    let topModel = '', topModelCred = 0;
+    C.credits.byModel.forEach((data, model) => { if (data.total > topModelCred) { topModelCred = data.total; topModel = model; } });
 
-    let peakMonth = '', peakInt = 0;
-    months.forEach(m => { if (monthly[m].interactions > peakInt) { peakInt = monthly[m].interactions; peakMonth = m; } });
-    const peakCredits = getTotalInteractions() > 0 ? (peakInt / getTotalInteractions()) * vfCredits : 0;
-
-    let topGrade = null, topGradeCredits = 0;
-    STATE.rawData.forEach(p => {
-        const c = getProjectCredits(p);
-        if (c > topGradeCredits) { topGradeCredits = c; topGrade = p; }
+    // Top grade
+    let topGrade = null, topGradeCred = 0;
+    PROJECTS.forEach(p => {
+        const c = C.credits.byProject.get(p.id) || 0;
+        if (c > topGradeCred) { topGradeCred = c; topGrade = p; }
     });
 
-    const dailyCredits = aggregateDaily();
-    const totalDays = Object.keys(dailyCredits).length;
-    const avgDailyCredits = totalDays > 0 ? vfCredits / totalDays : 0;
-    const projAnnual = avgDailyCredits * 365;
+    // I/O ratio for top model
+    const topModelData = C.credits.byModel.get(topModel);
+    const ioRatio = topModelData && topModelData.output > 0 ? (topModelData.input / topModelData.output).toFixed(1) : 'N/A';
 
-    const credPerConv = totals.users > 0 ? vfCredits / totals.users : 0;
+    const filterNote = STATE.excludedModels.size > 0 ? `<br><span class="badge badge-warning">${STATE.excludedModels.size} modelo(s) filtrado(s)</span>` : '';
 
     const grid = document.getElementById('insightsGrid');
     grid.innerHTML = `
     <div class="insight-card">
+        <div class="insight-card-header"><div class="insight-icon" style="background:rgba(99,102,241,.15)">🤖</div><div class="insight-card-title">Modelo Dominante</div></div>
+        <div class="insight-card-body">
+            <strong>${topModel}</strong> consume <strong>${fmtNum(topModelCred, 0)}</strong> créditos
+            (${C.credits.total > 0 ? (topModelCred / C.credits.total * 100).toFixed(1) : 0}% del total).
+            Ratio input/output: <strong>${ioRatio}:1</strong>
+            ${ioRatio !== 'N/A' && parseFloat(ioRatio) > 10 ? '<br>Ratio alto — posible optimización de contexto/prompt.' : ''}
+            ${filterNote}
+        </div>
+    </div>
+    <div class="insight-card">
         <div class="insight-card-header"><div class="insight-icon" style="background:rgba(244,63,94,.15)">⚠️</div><div class="insight-card-title">Estado del Plan</div></div>
         <div class="insight-card-body">
-            Se han consumido <strong>${fmtNum(vfCredits,0)}</strong> créditos (${(vfCredits/planTotal*100).toFixed(1)}% del plan).
-            Quedan <strong>${fmtNum(Math.max(0,remaining),0)}</strong> créditos.
-            ${remaining < 0 ? '<br><span class="badge badge-danger">PLAN EXCEDIDO</span>' :
-              remaining < 200000 ? '<br><span class="badge badge-warning">Créditos bajos</span>' :
-              '<br><span class="badge badge-success">Dentro del plan</span>'}
-        </div>
-    </div>
-    <div class="insight-card">
-        <div class="insight-card-header"><div class="insight-icon" style="background:rgba(99,102,241,.15)">📈</div><div class="insight-card-title">Proyección Anual</div></div>
-        <div class="insight-card-body">
-            Al ritmo actual de <strong>${fmtNum(avgDailyCredits,0)}</strong> créditos/día,
-            se proyectan <strong>${fmtNum(projAnnual,0)}</strong> créditos anuales
-            (<strong>$${fmtNum(projAnnual * creditToUSD,2)}</strong> USD).
-            ${projAnnual > planTotal ? `<br>Excede el plan por <strong>${fmtNum(projAnnual - planTotal,0)}</strong> créditos.` : `<br>Dentro del plan (${(projAnnual/planTotal*100).toFixed(1)}%).`}
-        </div>
-    </div>
-    <div class="insight-card">
-        <div class="insight-card-header"><div class="insight-icon" style="background:rgba(245,158,11,.15)">🔥</div><div class="insight-card-title">Mes Pico</div></div>
-        <div class="insight-card-body">
-            El mes con mayor consumo fue <strong>${peakMonth ? new Date(peakMonth+'-01').toLocaleDateString('es-MX',{month:'long',year:'numeric'}) : 'N/A'}</strong>
-            con ~<strong>${fmtNum(peakCredits,0)}</strong> créditos ($${fmtNum(peakCredits*creditToUSD,2)}).
+            <strong>${fmtNum(C.credits.total, 0)}</strong> créditos LLM consumidos (${C.credits.planPercent.toFixed(1)}% del plan).
+            ${remaining > 0 ? `Quedan <strong>${fmtNum(remaining, 0)}</strong> créditos.` : '<span class="badge badge-danger">PLAN EXCEDIDO</span>'}
+            ${C.credits.burnRateMonthly > 0 ? `<br>Al ritmo actual (~${fmtNum(C.credits.burnRateMonthly, 0)}/mes), ${remaining > 0 ? `duran ~${fmtNum(remaining / C.credits.burnRateMonthly, 1)} meses` : 'ya excedido'}.` : ''}
         </div>
     </div>
     <div class="insight-card">
         <div class="insight-card-header"><div class="insight-icon" style="background:rgba(16,185,129,.15)">🏫</div><div class="insight-card-title">Grado con Mayor Uso</div></div>
         <div class="insight-card-body">
-            <strong>${topGrade ? topGrade.project : 'N/A'}</strong>: ~<strong>${fmtNum(topGradeCredits,0)}</strong> créditos
-            (${topGrade ? fmtNum(topGrade.interactions) : 0} interacciones, ${topGrade ? fmtNum(topGrade.users) : 0} conversaciones).
+            <strong>${topGrade ? topGrade.name : 'N/A'}</strong>: <strong>${fmtNum(topGradeCred, 0)}</strong> créditos LLM
+            (${C.messaging.messagesByProject.get(topGrade?.id) || 0} mensajes, ${C.messaging.usersByProject.get(topGrade?.id) || 0} usuarios).
         </div>
     </div>
     <div class="insight-card">
-        <div class="insight-card-header"><div class="insight-icon" style="background:rgba(6,182,212,.15)">💡</div><div class="insight-card-title">Eficiencia por Interacción</div></div>
+        <div class="insight-card-header"><div class="insight-icon" style="background:rgba(6,182,212,.15)">💡</div><div class="insight-card-title">Eficiencia</div></div>
         <div class="insight-card-body">
-            Promedio real: <strong>${credPerInt.toFixed(2)}</strong> créditos/interacción.
-            Cada conversación de <strong>${totals.average.toFixed(0)}</strong> msgs cuesta ~<strong>${fmtNum(credPerConv,1)}</strong> créditos ($${fmtNum(credPerConv * creditToUSD,4)}).
-            <br>Esto refleja todas las llamadas LLM: orquestación, prompts, KB queries y agent steps.
-        </div>
-    </div>
-    <div class="insight-card">
-        <div class="insight-card-header"><div class="insight-icon" style="background:rgba(139,92,246,.15)">⏱️</div><div class="insight-card-title">Volatilidad</div></div>
-        <div class="insight-card-body">
-            ${numMonths >= 2 ? (() => {
-                const monthCreds = months.map(m => (monthly[m].interactions / getTotalInteractions()) * vfCredits);
-                const avg = monthCreds.reduce((a,b)=>a+b,0) / monthCreds.length;
-                const stdev = Math.sqrt(monthCreds.reduce((s,v) => s + Math.pow(v - avg, 2), 0) / monthCreds.length);
-                const cv = avg > 0 ? (stdev / avg * 100).toFixed(1) : 0;
-                return `Variabilidad mensual: <strong>${cv}%</strong> (σ=${fmtNum(stdev,0)}).
-                    ${cv > 50 ? '<br>Alta volatilidad — cambios de modelo durante experimentación.' :
-                     cv > 25 ? '<br>Moderada — estabilizándose.' : '<br>Baja — uso consistente.'}`;
-            })() : 'Datos insuficientes.'}
+            <strong>${C.combined.credPerMessage.toFixed(2)}</strong> créditos LLM por mensaje promedio.
+            <strong>${C.messaging.msgsPerUser.toFixed(1)}</strong> mensajes por usuario promedio.
+            <br>Costo por usuario: <strong>$${fmtNum(C.combined.credPerUser * COSTO_POR_CREDITO, 4)}</strong> USD en LLM.
         </div>
     </div>`;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PER USER TABLE
+   MODELS TAB
    ═══════════════════════════════════════════════════════════ */
-function renderPerUserTable() {
-    const tbody = document.getElementById('perUserTableBody');
-    const creditToUSD = getCreditToUSD();
-    const totalInt = getTotalInteractions();
-    const vfCredits = getVFCredits();
+function renderModelsTab() {
+    const container = document.getElementById('tab-models');
+    const C = STATE.computed;
 
-    const rows = PROJECTS.map(p => {
-        const proj = STATE.rawData.find(r => r.grade === p.grade);
-        if (!proj || proj.users === 0) return null;
+    if (C.credits.byModel.size === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🤖</div>Sin datos de modelos</div>';
+        return;
+    }
 
-        const projCredits = getProjectCredits(proj);
-        const credPerConv = projCredits / proj.users;
-        const credPerWeek = credPerConv * MAX_CONVS_PER_WEEK;
-        const credPerMonth = credPerWeek * 4.33;
-        const credPerYear = credPerConv * MAX_CONVS_PER_YEAR;
-
-        return `<tr>
-            <td><strong>${p.grade}°</strong></td>
-            <td class="mono text-right">${fmtNum(credPerConv,1)}</td>
-            <td class="mono text-right">${fmtNum(credPerWeek,1)}</td>
-            <td class="mono text-right">${fmtNum(credPerMonth,0)}</td>
-            <td class="mono text-right">${fmtNum(credPerYear,0)}</td>
-            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(credPerWeek*creditToUSD,3)}</td>
-            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(credPerMonth*creditToUSD,2)}</td>
-            <td class="mono text-right" style="color:var(--accent-amber)">$${fmtNum(credPerYear*creditToUSD,2)}</td>
+    let tableRows = '';
+    C.credits.byModel.forEach((data, model) => {
+        const pct = C.credits.total > 0 ? (data.total / C.credits.total * 100).toFixed(1) : 0;
+        const ratio = data.output > 0 ? (data.input / data.output).toFixed(1) : 'N/A';
+        const excluded = STATE.excludedModels.has(model);
+        tableRows += `<tr${excluded ? ' style="opacity:.5;text-decoration:line-through"' : ''}>
+            <td><strong>${model}</strong>${excluded ? ' <span class="badge badge-danger">excluido</span>' : ''}</td>
+            <td class="mono text-right">${fmtNum(data.input, 0)}</td>
+            <td class="mono text-right">${fmtNum(data.output, 0)}</td>
+            <td class="mono text-right" style="color:var(--accent-indigo)">${fmtNum(data.total, 0)}</td>
+            <td class="mono text-right">${pct}%</td>
+            <td class="mono text-right">${ratio}</td>
+            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(data.total * COSTO_POR_CREDITO, 2)}</td>
         </tr>`;
-    }).filter(Boolean);
+    });
 
-    tbody.innerHTML = rows.length > 0 ? rows.join('') : '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr>';
+    container.innerHTML = `
+    <div class="data-table-wrap">
+        <div class="data-table-header"><div class="data-table-title">🤖 Desglose por Modelo LLM</div></div>
+        <div style="overflow-x:auto"><table class="data-table">
+            <thead><tr>
+                <th>Modelo</th>
+                <th class="text-right">Créd. Input</th>
+                <th class="text-right">Créd. Output</th>
+                <th class="text-right">Total</th>
+                <th class="text-right">% del Total</th>
+                <th class="text-right">Ratio I/O</th>
+                <th class="text-right">Costo USD</th>
+            </tr></thead>
+            <tbody>${tableRows}</tbody>
+        </table></div>
+    </div>
+
+    <div class="chart-panel">
+        <div class="chart-panel-title">📊 Créditos por Modelo — Evolución Mensual</div>
+        <div class="chart-wrap"><canvas id="chartModelMonthly"></canvas></div>
+    </div>
+
+    <div class="chart-panel">
+        <div class="chart-panel-title">⚖️ Input vs Output por Modelo</div>
+        <div class="chart-wrap"><canvas id="chartModelIO"></canvas></div>
+    </div>`;
+
+    // Monthly stacked chart per model
+    setTimeout(() => {
+        if (typeof Chart === 'undefined') return;
+        destroyChart('modelMonthly');
+        const months = [...C.credits.byMonth.keys()].sort();
+        const activeModels = STATE.discoveredModels.filter(m => !STATE.excludedModels.has(m));
+        const datasets = activeModels.map((model, i) => ({
+            label: model,
+            data: months.map(m => {
+                const mm = C.credits.byMonthAndModel.get(m);
+                return mm ? (mm.get(model) || 0) : 0;
+            }),
+            backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length] + 'cc',
+            borderColor: MODEL_COLORS[i % MODEL_COLORS.length],
+            borderWidth: 1,
+        }));
+        const ctx = document.getElementById('chartModelMonthly');
+        if (ctx) {
+            STATE.charts.modelMonthly = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: { labels: months.map(m => new Date(m + '-01').toLocaleDateString('es-MX', { month: 'short', year: '2-digit' })), datasets },
+                options: { ...CHART_DEFAULTS, scales: { ...CHART_DEFAULTS.scales, x: { ...CHART_DEFAULTS.scales.x, stacked: true }, y: { ...CHART_DEFAULTS.scales.y, stacked: true } } }
+            });
+        }
+
+        // I/O Bar chart
+        destroyChart('modelIO');
+        const ioLabels = [], ioInput = [], ioOutput = [];
+        C.credits.byModel.forEach((data, model) => {
+            ioLabels.push(model);
+            ioInput.push(data.input);
+            ioOutput.push(data.output);
+        });
+        const ctxIO = document.getElementById('chartModelIO');
+        if (ctxIO) {
+            STATE.charts.modelIO = new Chart(ctxIO.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ioLabels,
+                    datasets: [
+                        { label: 'Input', data: ioInput, backgroundColor: '#6366f1cc' },
+                        { label: 'Output', data: ioOutput, backgroundColor: '#10b981cc' },
+                    ]
+                },
+                options: CHART_DEFAULTS
+            });
+        }
+    }, 50);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1226,270 +1257,198 @@ function renderPerUserTable() {
    ═══════════════════════════════════════════════════════════ */
 function renderGradeTab(grade) {
     const container = document.getElementById(`tab-grade-${grade}`);
-    const proj = STATE.rawData.find(r => r.grade === grade);
+    const C = STATE.computed;
+    const proj = PROJECTS.find(p => p.grade === grade);
+    if (!proj) { container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div>Grado no encontrado</div>'; return; }
 
-    if (!proj || proj.interactions === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">No hay datos para grado ${grade}°</div></div>`;
+    const credits = C.credits.byProject.get(proj.id) || 0;
+    const msgs = C.messaging.messagesByProject.get(proj.id) || 0;
+    const users = C.messaging.usersByProject.get(proj.id) || 0;
+    const credPerMsg = C.combined.credPerMsgByProject.get(proj.id) || 0;
+    const msgsPerUser = users > 0 ? msgs / users : 0;
+
+    if (credits === 0 && msgs === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📊</div>No hay datos para grado ${grade}°</div>`;
         return;
     }
 
-    const projCredits = getProjectCredits(proj);
-    const creditToUSD = getCreditToUSD();
-    const credPerConv = proj.users > 0 ? projCredits / proj.users : 0;
-    const credPerInt = proj.interactions > 0 ? projCredits / proj.interactions : 0;
-
-    const daily = proj.dailyStats;
-    const days = Object.keys(daily).sort();
-    const monthly = {};
-    days.forEach(d => {
-        const m = d.substring(0, 7);
-        if (!monthly[m]) monthly[m] = { interactions: 0, users: 0 };
-        monthly[m].interactions += daily[d].interactions;
-        monthly[m].users += daily[d].users;
+    // Build per-month data for this grade from raw
+    const monthlyCredits = new Map(), monthlyMsgs = new Map(), monthlyUsers = new Map();
+    (STATE.raw.creditUsage.get(proj.id) || []).forEach(item => {
+        if (STATE.excludedModels.has(item.model)) return;
+        const m = item.period.substring(0, 7);
+        monthlyCredits.set(m, (monthlyCredits.get(m) || 0) + item.count);
+    });
+    (STATE.raw.interactions.get(proj.id) || []).forEach(item => {
+        const m = item.period.substring(0, 7);
+        monthlyMsgs.set(m, (monthlyMsgs.get(m) || 0) + item.count);
+    });
+    (STATE.raw.uniqueUsers.get(proj.id) || []).forEach(item => {
+        const m = item.period.substring(0, 7);
+        monthlyUsers.set(m, (monthlyUsers.get(m) || 0) + item.count);
     });
 
+    const allMonths = new Set([...monthlyCredits.keys(), ...monthlyMsgs.keys()]);
+    const months = [...allMonths].sort();
     const cId = `chartG${grade}`;
-    const yearlyPerUser = credPerConv * MAX_CONVS_PER_YEAR;
 
     container.innerHTML = `
+    <div style="font-size:.7rem;font-weight:700;color:var(--accent-indigo);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Dominio A — Créditos</div>
     <div class="metrics-row">
-        <div class="metric-card mc-indigo">
-            <div class="metric-label">Total Créditos <span class="info-icon" data-tooltip="${proj.interactions} interacciones × (${fmtNum(projCredits,0)} ÷ ${proj.interactions}) = ${fmtNum(projCredits,0)} créditos proporcionales del total VF.">i</span></div>
-            <div class="metric-value">${formatVal(projCredits)}</div>
-        </div>
-        <div class="metric-card mc-cyan">
-            <div class="metric-label">Interacciones</div>
-            <div class="metric-value">${fmtNum(proj.interactions)}</div>
-        </div>
-        <div class="metric-card mc-emerald">
-            <div class="metric-label">Conversaciones</div>
-            <div class="metric-value">${fmtNum(proj.users)}</div>
-        </div>
-        <div class="metric-card mc-amber">
-            <div class="metric-label">Créd./Conv <span class="info-icon" data-tooltip="${fmtNum(projCredits,0)} créditos ÷ ${proj.users} conversaciones">i</span></div>
-            <div class="metric-value">${fmtNum(credPerConv, 1)}</div>
-        </div>
-        <div class="metric-card mc-violet">
-            <div class="metric-label">Msgs/Conv</div>
-            <div class="metric-value">${proj.average.toFixed(1)}</div>
-        </div>
-        <div class="metric-card mc-orange">
-            <div class="metric-label">Costo Total</div>
-            <div class="metric-value" style="color:var(--accent-emerald)">$${fmtNum(projCredits * creditToUSD, 2)}</div>
-        </div>
+        <div class="metric-card mc-indigo"><div class="metric-label">Créditos LLM</div><div class="metric-value">${formatVal(credits)}</div></div>
+        <div class="metric-card mc-emerald"><div class="metric-label">Costo USD</div><div class="metric-value">$${fmtNum(credits * COSTO_POR_CREDITO, 2)}</div></div>
+    </div>
+    <div style="font-size:.7rem;font-weight:700;color:var(--accent-cyan);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Dominio B — Mensajería</div>
+    <div class="metrics-row">
+        <div class="metric-card mc-cyan"><div class="metric-label">Mensajes</div><div class="metric-value">${fmtNum(msgs)}</div></div>
+        <div class="metric-card mc-violet"><div class="metric-label">Usuarios</div><div class="metric-value">${fmtNum(users)}</div></div>
+        <div class="metric-card mc-blue"><div class="metric-label">Msgs / Usuario</div><div class="metric-value">${fmtNum(msgsPerUser, 1)}</div></div>
+    </div>
+    <div style="font-size:.7rem;font-weight:700;color:var(--accent-amber);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Conjuntas</div>
+    <div class="metrics-row">
+        <div class="metric-card mc-orange"><div class="metric-label">Créd. LLM / Msg</div><div class="metric-value">${fmtNum(credPerMsg, 2)}</div></div>
+        <div class="metric-card mc-rose"><div class="metric-label">Créd. LLM / Usuario</div><div class="metric-value">${fmtNum(C.combined.credPerUserByProject.get(proj.id) || 0, 1)}</div></div>
     </div>
 
     <div class="two-col">
-        <div class="chart-panel">
-            <div class="chart-panel-title">📈 Créditos Diarios — ${grade}°</div>
-            <div class="chart-wrap"><canvas id="${cId}Daily"></canvas></div>
-        </div>
-        <div class="chart-panel">
-            <div class="chart-panel-title">📊 Créditos Mensuales — ${grade}°</div>
-            <div class="chart-wrap"><canvas id="${cId}Monthly"></canvas></div>
-        </div>
+        <div class="chart-panel"><div class="chart-panel-title">📊 Créditos LLM — ${grade}°</div><div class="chart-wrap"><canvas id="${cId}Monthly"></canvas></div></div>
+        <div class="chart-panel"><div class="chart-panel-title">📈 Mensajes — ${grade}°</div><div class="chart-wrap"><canvas id="${cId}Msgs"></canvas></div></div>
     </div>
 
     <div class="data-table-wrap">
-        <div class="data-table-header"><div class="data-table-title">📅 Detalle — ${grade}°</div></div>
+        <div class="data-table-header"><div class="data-table-title">📅 Detalle Mensual — ${grade}°</div></div>
         <div style="overflow-x:auto"><table class="data-table">
-            <thead><tr><th>Mes</th><th class="text-right">Msgs</th><th class="text-right">Conv</th><th class="text-right">Créditos</th><th class="text-right">Costo</th></tr></thead>
-            <tbody>${Object.keys(monthly).sort().map(m => {
-                const md = monthly[m];
-                const mCred = proj.interactions > 0 ? (md.interactions / proj.interactions) * projCredits : 0;
+            <thead><tr><th>Mes</th><th class="text-right">Créd. LLM</th><th class="text-right">Mensajes</th><th class="text-right">Usuarios</th><th class="text-right">Créd/Msg</th><th class="text-right">Costo USD</th></tr></thead>
+            <tbody>${months.map(m => {
+                const mc = monthlyCredits.get(m) || 0;
+                const mm = monthlyMsgs.get(m) || 0;
+                const mu = monthlyUsers.get(m) || 0;
                 return `<tr>
                     <td>${new Date(m+'-01').toLocaleDateString('es-MX',{month:'long',year:'numeric'})}</td>
-                    <td class="mono text-right">${fmtNum(md.interactions)}</td>
-                    <td class="mono text-right">${fmtNum(md.users)}</td>
-                    <td class="mono text-right" style="color:var(--accent-indigo)">${fmtNum(mCred,0)}</td>
-                    <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(mCred*creditToUSD,2)}</td>
+                    <td class="mono text-right" style="color:var(--accent-indigo)">${fmtNum(mc, 0)}</td>
+                    <td class="mono text-right">${fmtNum(mm)}</td>
+                    <td class="mono text-right">${fmtNum(mu)}</td>
+                    <td class="mono text-right" style="color:var(--accent-amber)">${mm > 0 ? (mc/mm).toFixed(2) : '—'}</td>
+                    <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(mc * COSTO_POR_CREDITO, 2)}</td>
                 </tr>`;
             }).join('')}</tbody>
         </table></div>
-    </div>
-
-    <div class="insight-card" style="margin-bottom:1.25rem">
-        <div class="insight-card-header"><div class="insight-icon" style="background:rgba(245,158,11,.15)">👤</div><div class="insight-card-title">Costo por Usuario — ${grade}°</div></div>
-        <div class="insight-card-body">
-            <strong>Semanal:</strong> ${fmtNum(credPerConv*MAX_CONVS_PER_WEEK,1)} créd ($${fmtNum(credPerConv*MAX_CONVS_PER_WEEK*creditToUSD,3)}) —
-            <strong>Mensual:</strong> ${fmtNum(credPerConv*MAX_CONVS_PER_WEEK*4.33,0)} créd ($${fmtNum(credPerConv*MAX_CONVS_PER_WEEK*4.33*creditToUSD,2)}) —
-            <strong>Anual:</strong> ${fmtNum(yearlyPerUser,0)} créd ($${fmtNum(yearlyPerUser*creditToUSD,2)})
-            <br><em style="font-size:.75rem;color:var(--text-muted)">Máx ${MAX_CONVS_PER_WEEK} conv/sem, ${WEEKS_PER_YEAR} semanas</em>
-        </div>
     </div>`;
 
-    // Render grade charts
-    if (typeof Chart === 'undefined') return;
+    // Charts
     setTimeout(() => {
-        try {
-        destroyChart(`g${grade}Daily`);
+        if (typeof Chart === 'undefined') return;
         destroyChart(`g${grade}Monthly`);
+        destroyChart(`g${grade}Msgs`);
 
-        const dailyValues = days.map(d => daily[d].interactions * credPerInt);
-        const ctxD = document.getElementById(`${cId}Daily`);
-        if (ctxD) {
-            STATE.charts[`g${grade}Daily`] = new Chart(ctxD.getContext('2d'), {
-                type: 'line',
-                data: { labels: days.map(d => new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short'})), datasets: [{ label: 'Créditos/día', data: dailyValues, borderColor: '#6366f1', backgroundColor: '#6366f120', fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2 }] },
-                options: CHART_DEFAULTS
-            });
-        }
-
-        const mKeys = Object.keys(monthly).sort();
-        const ctxM = document.getElementById(`${cId}Monthly`);
-        if (ctxM) {
-            STATE.charts[`g${grade}Monthly`] = new Chart(ctxM.getContext('2d'), {
+        const ctxC = document.getElementById(`${cId}Monthly`);
+        if (ctxC && months.length > 0) {
+            STATE.charts[`g${grade}Monthly`] = new Chart(ctxC.getContext('2d'), {
                 type: 'bar',
-                data: { labels: mKeys.map(m => new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})), datasets: [{ label: 'Créditos', data: mKeys.map(m => proj.interactions > 0 ? (monthly[m].interactions / proj.interactions) * projCredits : 0), backgroundColor: '#6366f1cc', borderColor: '#6366f1', borderWidth: 1 }] },
+                data: { labels: months.map(m => new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})), datasets: [{ label: 'Créditos LLM', data: months.map(m => monthlyCredits.get(m) || 0), backgroundColor: '#6366f1cc', borderColor: '#6366f1', borderWidth: 1 }] },
                 options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } } }
             });
         }
-        } catch(e) { console.error(`Chart error grade ${grade}:`, e); }
+        const ctxM = document.getElementById(`${cId}Msgs`);
+        if (ctxM && months.length > 0) {
+            STATE.charts[`g${grade}Msgs`] = new Chart(ctxM.getContext('2d'), {
+                type: 'bar',
+                data: { labels: months.map(m => new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})), datasets: [{ label: 'Mensajes', data: months.map(m => monthlyMsgs.get(m) || 0), backgroundColor: '#06b6d4cc', borderColor: '#06b6d4', borderWidth: 1 }] },
+                options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } } }
+            });
+        }
     }, 50);
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PROJECTIONS
+   PROJECTIONS TAB
    ═══════════════════════════════════════════════════════════ */
-function renderProjectionsCurrent() {
-    const vfCredits = getVFCredits();
-    const totals = getTotals();
-    const credPerConv = totals.users > 0 ? vfCredits / totals.users : 0;
-    const credPerInt = getCredPerInteraction();
-    const creditToUSD = getCreditToUSD();
+function renderProjectionsTab() {
+    const C = STATE.computed;
 
-    document.getElementById('projCurrentMetrics').innerHTML = `
-        <div class="metric-card mc-indigo">
-            <div class="metric-label">Créditos / Interacción (real)</div>
-            <div class="metric-value">${credPerInt.toFixed(2)}</div>
-            <div class="metric-sub">promedio calibrado</div>
-        </div>
-        <div class="metric-card mc-amber">
-            <div class="metric-label">Precio / Crédito</div>
-            <div class="metric-value">$${creditToUSD.toFixed(4)}</div>
-            <div class="metric-sub">${fmtNum(getPlanCost())} / ${fmtNum(getPlanTotal())} créd</div>
-        </div>
-        <div class="metric-card mc-emerald">
-            <div class="metric-label">Créd. / Conversación (global)</div>
-            <div class="metric-value">${fmtNum(credPerConv, 1)}</div>
-        </div>`;
+    // Filtered projection metrics
+    const filteredNote = STATE.excludedModels.size > 0 ? ` (sin ${[...STATE.excludedModels].join(', ')})` : ' (sin filtros)';
+    document.getElementById('projFilteredMetrics').innerHTML = `
+        <div class="metric-card mc-indigo"><div class="metric-label">Créd. LLM Filtrados</div><div class="metric-value">${fmtNum(C.credits.total, 0)}</div><div class="metric-sub">${filteredNote}</div></div>
+        <div class="metric-card mc-amber"><div class="metric-label">Créd/Msg (Filtrado)</div><div class="metric-value">${fmtNum(C.combined.credPerMessage, 2)}</div></div>
+        <div class="metric-card mc-emerald"><div class="metric-label">Costo USD (Filtrado)</div><div class="metric-value">$${fmtNum(C.credits.costUSD, 2)}</div></div>
+        ${STATE.excludedModels.size > 0 ? `<div class="metric-card mc-rose"><div class="metric-label">Créd. Excluidos</div><div class="metric-value">${fmtNum(C.creditsUnfiltered - C.credits.total, 0)}</div><div class="metric-sub">de modelos suprimidos</div></div>` : ''}`;
 
-    const tbody = document.getElementById('projCurrentTableBody');
+    // Per-project table
+    const tbody = document.getElementById('projFilteredTableBody');
     tbody.innerHTML = PROJECTS.map(p => {
-        const proj = STATE.rawData.find(r => r.grade === p.grade);
-        if (!proj || proj.users === 0) return null;
-        const pc = getProjectCredits(proj);
-        const cpc = pc / proj.users;
-        const yearly = cpc * MAX_CONVS_PER_YEAR;
-        return `<tr><td><strong>${p.grade}°</strong></td><td class="mono text-right">${fmtNum(cpc,1)}</td><td class="mono text-right">${fmtNum(yearly,0)}</td><td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(yearly*creditToUSD,2)}</td></tr>`;
-    }).filter(Boolean).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Sin datos</td></tr>';
-}
-
-function runSimulation() {
-    if (!STATE.loaded) { alert('Carga datos primero'); return; }
-    const simModel = document.getElementById('simModelSelect').value;
-    const baseModel = document.getElementById('simBaseModelSelect').value;
-    const simRate = MODEL_CRED_PER_MSG[simModel] || 0;
-    const baseRate = MODEL_CRED_PER_MSG[baseModel] || 1;
-    const ratio = baseRate > 0 ? simRate / baseRate : 1;
-    const creditToUSD = getCreditToUSD();
-
-    const tbody = document.getElementById('simCompTableBody');
-    let totActual = 0, totSim = 0;
-    const rows = PROJECTS.map(p => {
-        const proj = STATE.rawData.find(r => r.grade === p.grade);
-        if (!proj || proj.users === 0) return null;
-        const pc = getProjectCredits(proj);
-        const cpcActual = pc / proj.users;
-        const cpcSim = cpcActual * ratio;
-        const yActual = cpcActual * MAX_CONVS_PER_YEAR * creditToUSD;
-        const ySim = cpcSim * MAX_CONVS_PER_YEAR * creditToUSD;
-        totActual += yActual;
-        totSim += ySim;
-        const savings = yActual - ySim;
+        const cred = C.credits.byProject.get(p.id) || 0;
+        const msgs = C.messaging.messagesByProject.get(p.id) || 0;
+        const credPerMsg = msgs > 0 ? (cred / msgs).toFixed(2) : '—';
         return `<tr>
             <td><strong>${p.grade}°</strong></td>
-            <td class="mono">$${fmtNum(yActual,2)}</td>
-            <td class="mono">$${fmtNum(ySim,2)}</td>
-            <td class="mono" style="color:${savings>0?'var(--accent-emerald)':'var(--accent-rose)'}">${savings>0?'+':''}$${fmtNum(savings,2)}</td>
+            <td class="mono text-right" style="color:var(--accent-indigo)">${fmtNum(cred, 0)}</td>
+            <td class="mono text-right">${fmtNum(msgs)}</td>
+            <td class="mono text-right" style="color:var(--accent-amber)">${credPerMsg}</td>
+            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(cred * COSTO_POR_CREDITO, 2)}</td>
         </tr>`;
-    }).filter(Boolean);
-
-    const totalSavings = totActual - totSim;
-    rows.push(`<tr style="border-top:2px solid var(--border);font-weight:700">
-        <td>TOTAL (por usuario)</td>
-        <td class="mono">$${fmtNum(totActual / PROJECTS.length,2)}</td>
-        <td class="mono">$${fmtNum(totSim / PROJECTS.length,2)}</td>
-        <td class="mono" style="color:${totalSavings>0?'var(--accent-emerald)':'var(--accent-rose)'}">${totalSavings>0?'+':''}$${fmtNum(totalSavings / PROJECTS.length,2)}</td>
-    </tr>`);
-
-    tbody.innerHTML = rows.join('');
-    document.getElementById('simResults').style.display = '';
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Sin datos</td></tr>';
 }
 
 function runCapacity() {
     if (!STATE.loaded) { alert('Carga datos primero'); return; }
-    const totalUsers = parseInt(document.getElementById('capGlobalUsers').value) || 100;
-    const convsYear = parseInt(document.getElementById('capConvsYear').value) || MAX_CONVS_PER_YEAR;
-    const creditToUSD = getCreditToUSD();
-    const perGrade = Math.ceil(totalUsers / PROJECTS.length);
+    const C = STATE.computed;
+    const totalUsers = parseInt(document.getElementById('capUsers').value) || 100;
+    const msgsYear = parseInt(document.getElementById('capMsgsYear').value) || 1000;
+    const credPerMsg = C.combined.credPerMessage;
 
-    let totalCredits = 0;
-    const tbody = document.getElementById('capTableBody');
-    const rows = PROJECTS.map(p => {
-        const proj = STATE.rawData.find(r => r.grade === p.grade);
-        const credPerConv = proj && proj.users > 0 ? getProjectCredits(proj) / proj.users : (getVFCredits() / (getTotals().users || 1));
-        const credits = perGrade * convsYear * credPerConv;
-        totalCredits += credits;
-        return `<tr><td><strong>${p.grade}°</strong></td><td class="mono text-right">${perGrade}</td><td class="mono text-right">${fmtNum(credits,0)}</td><td class="mono text-right" style="color:var(--accent-amber)">$${fmtNum(credits*creditToUSD,2)}</td></tr>`;
-    });
+    // LLM credits per user per year
+    const credLLMPerUser = credPerMsg * msgsYear;
+    const hostingPerUser = msgsYear * CREDITO_HOSTING;
+    const totalCredPerUser = credLLMPerUser + hostingPerUser;
+    const totalCredAll = totalCredPerUser * totalUsers;
+    const costPerUser = totalCredPerUser * COSTO_POR_CREDITO;
+    const costAll = totalCredAll * COSTO_POR_CREDITO;
+    const planTotal = getPlanTotal();
 
-    rows.push(`<tr style="border-top:2px solid var(--border);font-weight:700"><td>TOTAL</td><td class="mono text-right">${totalUsers}</td><td class="mono text-right">${fmtNum(totalCredits,0)}</td><td class="mono text-right" style="color:var(--accent-amber)">$${fmtNum(totalCredits*creditToUSD,2)}</td></tr>`);
-    tbody.innerHTML = rows.join('');
+    const filterNote = STATE.excludedModels.size > 0 ? ` (basado en modelos filtrados: ${STATE.discoveredModels.filter(m => !STATE.excludedModels.has(m)).join(', ')})` : '';
 
     document.getElementById('capMetrics').innerHTML = `
-        <div class="metric-card mc-indigo"><div class="metric-label">Créditos Totales/Año</div><div class="metric-value">${fmtNum(totalCredits,0)}</div><div class="metric-sub">$${fmtNum(totalCredits*creditToUSD,2)} USD</div></div>
-        <div class="metric-card mc-amber"><div class="metric-label">$/Usuario/Año</div><div class="metric-value">$${fmtNum(totalUsers>0?totalCredits*creditToUSD/totalUsers:0,2)}</div></div>
-        <div class="metric-card ${totalCredits <= getPlanTotal() ? 'mc-emerald' : 'mc-rose'}"><div class="metric-label">${totalCredits <= getPlanTotal() ? 'Dentro del Plan' : 'Excede el Plan'}</div><div class="metric-value">${(totalCredits/getPlanTotal()*100).toFixed(1)}%</div><div class="metric-sub">${fmtNum(totalCredits,0)} / ${fmtNum(getPlanTotal(),0)} créditos</div></div>`;
+        <div class="metric-card mc-indigo"><div class="metric-label">Créditos Totales/Año</div><div class="metric-value">${fmtNum(totalCredAll, 0)}</div><div class="metric-sub">LLM: ${fmtNum(credLLMPerUser * totalUsers, 0)} + Hosting: ${fmtNum(hostingPerUser * totalUsers, 0)}</div></div>
+        <div class="metric-card mc-amber"><div class="metric-label">Costo Total/Año</div><div class="metric-value">$${fmtNum(costAll, 2)}</div></div>
+        <div class="metric-card mc-emerald"><div class="metric-label">$/Usuario/Año</div><div class="metric-value">$${fmtNum(costPerUser, 2)}</div><div class="metric-sub">${fmtNum(credPerMsg, 2)} créd/msg × ${msgsYear} msgs${filterNote}</div></div>
+        <div class="metric-card ${totalCredAll <= planTotal ? 'mc-emerald' : 'mc-rose'}"><div class="metric-label">${totalCredAll <= planTotal ? 'Dentro del Plan' : 'Excede el Plan'}</div><div class="metric-value">${(totalCredAll/planTotal*100).toFixed(1)}%</div><div class="metric-sub">${fmtNum(totalCredAll, 0)} / ${fmtNum(planTotal, 0)}</div></div>`;
 
     document.getElementById('capResults').style.display = '';
 }
 
 /* ═══════════════════════════════════════════════════════════
-   UTILITIES
+   CSV EXPORT
    ═══════════════════════════════════════════════════════════ */
-function fmtNum(n, decimals = null) {
-    if (n === null || n === undefined || isNaN(n)) return '—';
-    if (decimals !== null) return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
-    if (Math.abs(n) >= 10_000) return (n / 1_000).toFixed(1) + 'K';
-    return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
-}
-
-function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
-function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
-function updateLoadingProgress(t) { document.getElementById('loadingProgress').textContent = t; }
-function setStatus(type, text) { document.getElementById('statusDot').className = 'status-dot ' + type; document.getElementById('statusText').textContent = text; }
-
 function exportCSV() {
     if (!STATE.loaded) { alert('Carga datos primero'); return; }
-    const creditToUSD = getCreditToUSD();
-    let csv = 'Grado,Interacciones,Conversaciones,Promedio Msgs/Conv,Créditos (Proporc.),Costo USD\n';
-    STATE.rawData.forEach(p => {
-        const c = getProjectCredits(p);
-        csv += `"${p.project}",${p.interactions},${p.users},${p.average.toFixed(2)},${c.toFixed(0)},${(c*creditToUSD).toFixed(2)}\n`;
+    const C = STATE.computed;
+    let csv = 'Grado,Créditos LLM,Mensajes,Usuarios,Créd/Msg,Costo USD\n';
+    PROJECTS.forEach(p => {
+        const cred = C.credits.byProject.get(p.id) || 0;
+        const msgs = C.messaging.messagesByProject.get(p.id) || 0;
+        const users = C.messaging.usersByProject.get(p.id) || 0;
+        csv += `"${p.name}",${cred},${msgs},${users},${msgs > 0 ? (cred/msgs).toFixed(2) : 0},${(cred*COSTO_POR_CREDITO).toFixed(2)}\n`;
     });
-    csv += `\n\nDetalle Mensual\nMes,Interacciones,Conversaciones,Créditos,Costo USD\n`;
-    const monthly = aggregateMonthly();
-    const totalInt = getTotalInteractions();
-    Object.entries(monthly).sort().forEach(([m, d]) => {
-        const c = totalInt > 0 ? (d.interactions / totalInt) * getVFCredits() : 0;
-        csv += `"${m}",${d.interactions},${d.users},${c.toFixed(0)},${(c*getCreditToUSD()).toFixed(2)}\n`;
+
+    csv += '\n\nDetalle Mensual\nMes,Créditos LLM,Mensajes,Usuarios,Créd/Msg,Costo USD\n';
+    const months = [...new Set([...C.credits.byMonth.keys(), ...C.messaging.messagesByMonth.keys()])].sort();
+    months.forEach(m => {
+        const cred = C.credits.byMonth.get(m) || 0;
+        const msgs = C.messaging.messagesByMonth.get(m) || 0;
+        const users = C.messaging.usersByMonth.get(m) || 0;
+        csv += `"${m}",${cred},${msgs},${users},${msgs > 0 ? (cred/msgs).toFixed(2) : 0},${(cred*COSTO_POR_CREDITO).toFixed(2)}\n`;
     });
+
+    csv += '\n\nModelos LLM\nModelo,Input,Output,Total,% Total,Costo USD\n';
+    C.credits.byModel.forEach((data, model) => {
+        csv += `"${model}",${data.input},${data.output},${data.total},${C.credits.total > 0 ? (data.total/C.credits.total*100).toFixed(1) : 0},${(data.total*COSTO_POR_CREDITO).toFixed(2)}\n`;
+    });
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `xolo-credits-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `xolo-credits-v2-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
 }
 </script>
