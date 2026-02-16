@@ -1,0 +1,2487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xolo AI — Credit Analytics Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+/* ═══════════════════════════════════════════════════════════
+   CSS VARIABLES & RESET
+   ═══════════════════════════════════════════════════════════ */
+:root {
+    --bg-base: #0a0e1a;
+    --bg-surface: #111827;
+    --bg-card: #1a2236;
+    --bg-card-hover: #1f2b42;
+    --bg-input: #0d1220;
+    --border: #2a3550;
+    --border-active: #6366f1;
+    --text-primary: #e8ecf4;
+    --text-secondary: #8892a8;
+    --text-muted: #5a6478;
+    --accent-indigo: #6366f1;
+    --accent-violet: #8b5cf6;
+    --accent-emerald: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-rose: #f43f5e;
+    --accent-cyan: #06b6d4;
+    --accent-blue: #3b82f6;
+    --accent-lime: #84cc16;
+    --accent-orange: #f97316;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+    --shadow-card: 0 2px 12px rgba(0,0,0,.35);
+    --shadow-elevated: 0 8px 30px rgba(0,0,0,.5);
+    --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+    --transition: .2s cubic-bezier(.4,0,.2,1);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family: var(--font-sans);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LAYOUT SHELL
+   ═══════════════════════════════════════════════════════════ */
+.app-shell {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.75rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    margin-bottom: 1.25rem;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.logo-mark {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent-indigo), var(--accent-violet));
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 800; color: #fff;
+}
+
+.header h1 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+
+.header h1 span { color: var(--accent-indigo); }
+
+.header-subtitle {
+    font-size: .8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.header-right {
+    display: flex; align-items: center; gap: .75rem;
+}
+
+.status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent-emerald);
+    box-shadow: 0 0 8px rgba(16,185,129,.5);
+}
+
+.status-dot.loading { background: var(--accent-amber); animation: pulse-dot 1.2s infinite; }
+.status-dot.error { background: var(--accent-rose); }
+
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ═══════════════════════════════════════════════════════════
+   TABS
+   ═══════════════════════════════════════════════════════════ */
+.tab-bar {
+    display: flex;
+    gap: .35rem;
+    padding: .35rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tab-bar::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+    padding: .6rem 1.1rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: .82rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+
+.tab-btn:hover { color: var(--text-primary); background: var(--bg-card); }
+
+.tab-btn.active {
+    background: var(--accent-indigo);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(99,102,241,.35);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ═══════════════════════════════════════════════════════════
+   CONTROLS BAR
+   ═══════════════════════════════════════════════════════════ */
+.controls-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    align-items: flex-end;
+    padding: 1.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.25rem;
+}
+
+.ctrl-group {
+    display: flex; flex-direction: column; gap: .35rem;
+}
+
+.ctrl-group label {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.ctrl-input, .ctrl-select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: .55rem .85rem;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: .85rem;
+    min-width: 150px;
+    transition: var(--transition);
+}
+
+.ctrl-input:focus, .ctrl-select:focus {
+    outline: none;
+    border-color: var(--accent-indigo);
+    box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+
+.btn {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .55rem 1.25rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-primary { background: var(--accent-indigo); color: #fff; }
+.btn-primary:hover { background: #5558e6; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(99,102,241,.3); }
+.btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--accent-indigo); }
+.btn-success { background: var(--accent-emerald); color: #fff; }
+.btn-success:hover { background: #059669; }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+.ctrl-spacer { flex: 1; min-width: 1rem; }
+
+/* ═══════════════════════════════════════════════════════════
+   TOGGLE GROUP
+   ═══════════════════════════════════════════════════════════ */
+.toggle-group {
+    display: inline-flex;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.toggle-btn {
+    padding: .5rem .9rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.toggle-btn.active {
+    background: var(--accent-indigo);
+    color: #fff;
+}
+
+.toggle-btn:hover:not(.active) { color: var(--text-primary); }
+
+/* ═══════════════════════════════════════════════════════════
+   MODEL CHIPS FILTER
+   ═══════════════════════════════════════════════════════════ */
+.chip-filters {
+    display: flex; flex-wrap: wrap; gap: .4rem;
+    padding: .75rem 1.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.25rem;
+}
+
+.chip-filters-label {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    width: 100%;
+    margin-bottom: .25rem;
+}
+
+.chip {
+    padding: .3rem .7rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: var(--font-sans);
+    font-size: .75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+}
+
+.chip:hover { border-color: var(--accent-indigo); color: var(--text-primary); }
+
+.chip.active {
+    background: rgba(99,102,241,.15);
+    border-color: var(--accent-indigo);
+    color: var(--accent-indigo);
+}
+
+.chip.chip-all { font-weight: 700; }
+
+/* ═══════════════════════════════════════════════════════════
+   METRIC CARDS
+   ═══════════════════════════════════════════════════════════ */
+.metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.metric-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    position: relative;
+    transition: var(--transition);
+}
+
+.metric-card:hover { border-color: var(--border-active); transform: translateY(-2px); box-shadow: var(--shadow-card); }
+
+.metric-label {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    display: flex; align-items: center; gap: .4rem;
+    margin-bottom: .6rem;
+}
+
+.metric-value {
+    font-size: 1.85rem;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    font-family: var(--font-mono);
+}
+
+.metric-sub {
+    font-size: .78rem;
+    color: var(--text-secondary);
+    margin-top: .3rem;
+}
+
+.metric-trend {
+    display: inline-flex; align-items: center; gap: .2rem;
+    font-size: .75rem; font-weight: 600;
+    padding: .15rem .45rem;
+    border-radius: 100px;
+}
+
+.metric-trend.up { background: rgba(16,185,129,.12); color: var(--accent-emerald); }
+.metric-trend.down { background: rgba(244,63,94,.12); color: var(--accent-rose); }
+
+/* Color variants */
+.mc-indigo .metric-value { color: var(--accent-indigo); }
+.mc-emerald .metric-value { color: var(--accent-emerald); }
+.mc-amber .metric-value { color: var(--accent-amber); }
+.mc-rose .metric-value { color: var(--accent-rose); }
+.mc-cyan .metric-value { color: var(--accent-cyan); }
+.mc-violet .metric-value { color: var(--accent-violet); }
+.mc-blue .metric-value { color: var(--accent-blue); }
+.mc-orange .metric-value { color: var(--accent-orange); }
+
+/* ═══════════════════════════════════════════════════════════
+   INFO TOOLTIP
+   ═══════════════════════════════════════════════════════════ */
+.info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    font-size: .6rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: help;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.info-icon::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: .6rem .85rem;
+    border-radius: var(--radius-sm);
+    font-size: .72rem;
+    font-weight: 400;
+    line-height: 1.45;
+    white-space: normal;
+    width: max-content;
+    max-width: 320px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+    z-index: 999;
+    box-shadow: var(--shadow-elevated);
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--font-sans);
+}
+
+.info-icon:hover::after { opacity: 1; }
+
+/* ═══════════════════════════════════════════════════════════
+   CHART PANELS
+   ═══════════════════════════════════════════════════════════ */
+.chart-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.chart-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.chart-panel-title {
+    font-size: .95rem;
+    font-weight: 700;
+    display: flex; align-items: center; gap: .5rem;
+}
+
+.chart-wrap {
+    position: relative;
+    height: 300px;
+}
+
+.chart-wrap canvas { width: 100% !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   DATA TABLE
+   ═══════════════════════════════════════════════════════════ */
+.data-table-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+
+.data-table-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-table-title {
+    font-size: .95rem; font-weight: 700;
+    display: flex; align-items: center; gap: .5rem;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th, .data-table td {
+    padding: .7rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(42,53,80,.5);
+    font-size: .82rem;
+}
+
+.data-table th {
+    background: var(--bg-surface);
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-size: .7rem;
+    position: sticky; top: 0;
+}
+
+.data-table tbody tr:hover td { background: var(--bg-card-hover); }
+
+.data-table .mono {
+    font-family: var(--font-mono);
+    font-weight: 600;
+}
+
+.data-table .text-right { text-align: right; }
+
+/* ═══════════════════════════════════════════════════════════
+   INSIGHTS CARDS
+   ═══════════════════════════════════════════════════════════ */
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.insight-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+}
+
+.insight-card-header {
+    display: flex; align-items: center; gap: .5rem;
+    margin-bottom: .75rem;
+}
+
+.insight-icon {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+}
+
+.insight-card-title {
+    font-size: .85rem; font-weight: 700;
+}
+
+.insight-card-body {
+    font-size: .82rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.insight-card-body strong { color: var(--text-primary); }
+
+/* ═══════════════════════════════════════════════════════════
+   PROJECTIONS TAB
+   ═══════════════════════════════════════════════════════════ */
+.projection-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.projection-title {
+    font-size: 1.05rem; font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: .5rem;
+}
+
+.projection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.sim-input-row {
+    display: flex; flex-wrap: wrap; gap: .75rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.sim-input-row .ctrl-input { min-width: 100px; }
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.comparison-table th, .comparison-table td {
+    padding: .65rem .85rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(42,53,80,.5);
+    font-size: .8rem;
+}
+
+.comparison-table th {
+    background: var(--bg-surface);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.comparison-table .highlight {
+    background: rgba(99,102,241,.08);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LOADING OVERLAY
+   ═══════════════════════════════════════════════════════════ */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,14,26,.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+.loading-overlay.hidden { display: none; }
+
+.loading-spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent-indigo);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-label {
+    margin-top: 1rem;
+    color: var(--text-secondary);
+    font-size: .9rem;
+}
+
+.loading-progress {
+    margin-top: .5rem;
+    color: var(--text-muted);
+    font-size: .78rem;
+    font-family: var(--font-mono);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EMPTY STATE
+   ═══════════════════════════════════════════════════════════ */
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+.empty-state-text { font-size: .9rem; }
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    .app-shell { padding: .75rem; }
+    .header { flex-direction: column; gap: .75rem; text-align: center; }
+    .metrics-row { grid-template-columns: repeat(2, 1fr); }
+    .insights-grid { grid-template-columns: 1fr; }
+    .controls-bar { flex-direction: column; align-items: stretch; }
+    .ctrl-spacer { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCROLL
+   ═══════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Badge */
+.badge {
+    display: inline-block;
+    padding: .15rem .5rem;
+    border-radius: 100px;
+    font-size: .7rem;
+    font-weight: 600;
+}
+.badge-danger { background: rgba(244,63,94,.15); color: var(--accent-rose); }
+.badge-warning { background: rgba(245,158,11,.15); color: var(--accent-amber); }
+.badge-success { background: rgba(16,185,129,.15); color: var(--accent-emerald); }
+
+/* Two-col layout */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-label">Cargando datos de analítica...</div>
+    <div class="loading-progress" id="loadingProgress"></div>
+</div>
+
+<div class="app-shell">
+
+    <!-- ════════════ HEADER ════════════ -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo-mark">X</div>
+            <div>
+                <h1>Xolo <span>Credit Analytics</span></h1>
+                <div class="header-subtitle">Dashboard de análisis de costos y créditos Voiceflow</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status-dot" id="statusDot"></div>
+            <span style="font-size:.78rem;color:var(--text-muted)" id="statusText">Listo</span>
+        </div>
+    </header>
+
+    <!-- ════════════ TABS ════════════ -->
+    <nav class="tab-bar" id="tabBar">
+        <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="tab-btn" data-tab="grade-3">3°</button>
+        <button class="tab-btn" data-tab="grade-4">4°</button>
+        <button class="tab-btn" data-tab="grade-5">5°</button>
+        <button class="tab-btn" data-tab="grade-6">6°</button>
+        <button class="tab-btn" data-tab="grade-7">7°</button>
+        <button class="tab-btn" data-tab="grade-8">8°</button>
+        <button class="tab-btn" data-tab="grade-9">9°</button>
+        <button class="tab-btn" data-tab="grade-10">10°</button>
+        <button class="tab-btn" data-tab="grade-11">11°</button>
+        <button class="tab-btn" data-tab="grade-12">12°</button>
+        <button class="tab-btn" data-tab="projections">⚡ Proyecciones</button>
+    </nav>
+
+    <!-- ════════════ CONTROLS ════════════ -->
+    <div class="controls-bar">
+        <div class="ctrl-group">
+            <label>Período</label>
+            <select class="ctrl-select" id="periodPreset">
+                <option value="this_month">Este mes</option>
+                <option value="last_month">Mes pasado</option>
+                <option value="last_3">Últimos 3 meses</option>
+                <option value="last_6">Últimos 6 meses</option>
+                <option value="all" selected>Todo el historial</option>
+                <option value="custom">Personalizado</option>
+            </select>
+        </div>
+        <div class="ctrl-group" id="customDateStart" style="display:none">
+            <label>Desde</label>
+            <input type="date" class="ctrl-input" id="startDate" value="2025-01-05">
+        </div>
+        <div class="ctrl-group" id="customDateEnd" style="display:none">
+            <label>Hasta</label>
+            <input type="date" class="ctrl-input" id="endDate">
+        </div>
+        <div class="ctrl-group">
+            <label>Unidad</label>
+            <div class="toggle-group" id="unitToggle">
+                <button class="toggle-btn active" data-unit="credits">Créditos</button>
+                <button class="toggle-btn" data-unit="messages">Mensajes</button>
+                <button class="toggle-btn" data-unit="cost">USD $</button>
+            </div>
+        </div>
+        <div class="ctrl-spacer"></div>
+        <button class="btn btn-primary" id="btnFetch" onclick="fetchAllData()">▶ Cargar Datos</button>
+        <button class="btn btn-secondary" onclick="exportCSV()">↓ CSV</button>
+    </div>
+
+    <!-- ════════════ MODEL FILTERS ════════════ -->
+    <div class="chip-filters" id="modelFilters">
+        <div class="chip-filters-label">Filtrar por modelo / característica</div>
+        <!-- chips rendered by JS -->
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TAB: DASHBOARD (GLOBAL)
+         ════════════════════════════════════════════════════════ -->
+    <div class="tab-content active" id="tab-dashboard">
+        <!-- KPI Cards -->
+        <div class="metrics-row" id="globalMetrics">
+            <div class="metric-card mc-indigo">
+                <div class="metric-label">Total Créditos Consumidos <span class="info-icon" data-tooltip="Suma de créditos de orquestación (1/msg) + créditos LLM estimados según modelo. Calculado como: Σ(mensajes × (1 + tasa_modelo))">i</span></div>
+                <div class="metric-value" id="kpiTotalCredits">—</div>
+                <div class="metric-sub" id="kpiTotalCreditsSub"></div>
+            </div>
+            <div class="metric-card mc-emerald">
+                <div class="metric-label">Créditos Restantes <span class="info-icon" data-tooltip="Del plan anual de 2,400,000 créditos ($10,800 USD). Restantes = 2,400,000 - total consumidos.">i</span></div>
+                <div class="metric-value" id="kpiRemaining">—</div>
+                <div class="metric-sub" id="kpiRemainingSub"></div>
+            </div>
+            <div class="metric-card mc-amber">
+                <div class="metric-label">Costo Promedio / Conversación <span class="info-icon" data-tooltip="Total créditos ÷ total conversaciones. Una conversación = un usuario único por día por proyecto.">i</span></div>
+                <div class="metric-value" id="kpiAvgConv">—</div>
+                <div class="metric-sub" id="kpiAvgConvSub"></div>
+            </div>
+            <div class="metric-card mc-rose">
+                <div class="metric-label">Burn Rate Mensual <span class="info-icon" data-tooltip="Promedio de créditos consumidos por mes en el período seleccionado. Calculado como: total créditos ÷ cantidad de meses con actividad.">i</span></div>
+                <div class="metric-value" id="kpiBurnRate">—</div>
+                <div class="metric-sub" id="kpiBurnRateSub"></div>
+            </div>
+            <div class="metric-card mc-cyan">
+                <div class="metric-label">Total Interacciones <span class="info-icon" data-tooltip="Número total de mensajes enviados en el período. Cada mensaje = 1 interacción = 1 crédito de orquestación.">i</span></div>
+                <div class="metric-value" id="kpiTotalMsgs">—</div>
+                <div class="metric-sub" id="kpiTotalMsgsSub"></div>
+            </div>
+            <div class="metric-card mc-violet">
+                <div class="metric-label">Total Conversaciones <span class="info-icon" data-tooltip="Usuarios únicos por día por proyecto. Cada usuario único se cuenta como una conversación.">i</span></div>
+                <div class="metric-value" id="kpiTotalConvs">—</div>
+                <div class="metric-sub" id="kpiTotalConvsSub"></div>
+            </div>
+            <div class="metric-card mc-blue">
+                <div class="metric-label">Msgs Promedio / Conv <span class="info-icon" data-tooltip="Total interacciones ÷ total conversaciones. Indica cuántos mensajes en promedio tiene cada conversación.">i</span></div>
+                <div class="metric-value" id="kpiMsgsPerConv">—</div>
+                <div class="metric-sub" id="kpiMsgsPerConvSub"></div>
+            </div>
+            <div class="metric-card mc-orange">
+                <div class="metric-label">Meses Restantes (Est.) <span class="info-icon" data-tooltip="Créditos restantes ÷ burn rate mensual. Estima cuántos meses durará el saldo actual al ritmo de uso actual.">i</span></div>
+                <div class="metric-value" id="kpiMonthsLeft">—</div>
+                <div class="metric-sub" id="kpiMonthsLeftSub"></div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="two-col">
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <div class="chart-panel-title">📊 Créditos Mensuales por Modelo <span class="info-icon" data-tooltip="Muestra la distribución mensual de créditos estimados separados por modelo/característica. Se incluyen créditos de orquestación (chat usage) y créditos LLM.">i</span></div>
+                </div>
+                <div class="chart-wrap"><canvas id="chartMonthlyCredits"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <div class="chart-panel-title">📈 Tendencia Diaria de Consumo <span class="info-icon" data-tooltip="Créditos consumidos por día. La línea muestra la media móvil de 7 días para identificar tendencias.">i</span></div>
+                </div>
+                <div class="chart-wrap"><canvas id="chartDailyTrend"></canvas></div>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <div class="chart-panel-title">🍩 Distribución por Modelo <span class="info-icon" data-tooltip="Porcentaje del total de créditos atribuidos a cada modelo/característica. Estimado en base a la configuración de modelo activa.">i</span></div>
+                </div>
+                <div class="chart-wrap"><canvas id="chartModelDist"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <div class="chart-panel-title">🏫 Créditos por Grado <span class="info-icon" data-tooltip="Comparativa de consumo total de créditos por grado escolar. Cada barra representa un proyecto/grado.">i</span></div>
+                </div>
+                <div class="chart-wrap"><canvas id="chartByGrade"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Monthly table -->
+        <div class="data-table-wrap">
+            <div class="data-table-header">
+                <div class="data-table-title">📅 Detalle Mensual</div>
+            </div>
+            <div style="overflow-x:auto">
+                <table class="data-table" id="monthlyTable">
+                    <thead>
+                        <tr>
+                            <th>Mes</th>
+                            <th class="text-right">Interacciones</th>
+                            <th class="text-right">Conversaciones</th>
+                            <th class="text-right">Créditos Orq.</th>
+                            <th class="text-right">Créditos LLM (Est.)</th>
+                            <th class="text-right">Total Créditos</th>
+                            <th class="text-right">Costo Est. (USD)</th>
+                            <th>Tendencia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyTableBody">
+                        <tr><td colspan="8" class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">Haz clic en "Cargar Datos" para comenzar el análisis</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Insights -->
+        <div class="insights-grid" id="insightsGrid">
+            <!-- dynamically generated -->
+        </div>
+
+        <!-- Per-user cost estimates -->
+        <div class="data-table-wrap">
+            <div class="data-table-header">
+                <div class="data-table-title">👤 Costo Estimado por Usuario <span class="info-icon" data-tooltip="Basado en: máx 2 conversaciones/semana, máx 2 horas por sesión. Se usa el promedio de créditos por conversación actual y la config de modelo activa.">i</span></div>
+            </div>
+            <div style="overflow-x:auto">
+                <table class="data-table" id="perUserTable">
+                    <thead>
+                        <tr>
+                            <th>Grado</th>
+                            <th class="text-right">Créd./Conv</th>
+                            <th class="text-right">Créd./Semana</th>
+                            <th class="text-right">Créd./Mes</th>
+                            <th class="text-right">Créd./Año</th>
+                            <th class="text-right">$/Semana</th>
+                            <th class="text-right">$/Mes</th>
+                            <th class="text-right">$/Año</th>
+                        </tr>
+                    </thead>
+                    <tbody id="perUserTableBody">
+                        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">Sin datos</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TAB: GRADE VIEWS (generated dynamically)
+         ════════════════════════════════════════════════════════ -->
+    <div class="tab-content" id="tab-grade-3"></div>
+    <div class="tab-content" id="tab-grade-4"></div>
+    <div class="tab-content" id="tab-grade-5"></div>
+    <div class="tab-content" id="tab-grade-6"></div>
+    <div class="tab-content" id="tab-grade-7"></div>
+    <div class="tab-content" id="tab-grade-8"></div>
+    <div class="tab-content" id="tab-grade-9"></div>
+    <div class="tab-content" id="tab-grade-10"></div>
+    <div class="tab-content" id="tab-grade-11"></div>
+    <div class="tab-content" id="tab-grade-12"></div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TAB: PROJECTIONS
+         ════════════════════════════════════════════════════════ -->
+    <div class="tab-content" id="tab-projections">
+        <!-- Section 1: Current config summary -->
+        <div class="projection-section">
+            <div class="projection-title">📋 Configuración Actual</div>
+            <div class="metrics-row" id="projCurrentMetrics"></div>
+            <div style="overflow-x:auto;margin-top:1rem">
+                <table class="data-table" id="projCurrentTable">
+                    <thead>
+                        <tr>
+                            <th>Grado</th>
+                            <th class="text-right">Créd./Conv (actual)</th>
+                            <th class="text-right">Est. Créd./Usuario/Año</th>
+                            <th class="text-right">Est. $/Usuario/Año</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projCurrentTableBody">
+                        <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:2rem;">Carga datos primero</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 2: Model simulator -->
+        <div class="projection-section">
+            <div class="projection-title">🔬 Simulador de Configuración de Modelos</div>
+            <p style="color:var(--text-secondary);font-size:.82rem;margin-bottom:1rem;">
+                Selecciona los modelos que usará tu agente y su peso relativo para estimar costos con una configuración alternativa.
+            </p>
+            <div id="simModelEntries">
+                <!-- Dynamically generated model entries -->
+            </div>
+            <button class="btn btn-secondary" onclick="addSimModelEntry()" style="margin-top:.5rem;">+ Agregar modelo</button>
+            <button class="btn btn-primary" onclick="runSimulation()" style="margin-top:.5rem;margin-left:.5rem;">⚡ Simular</button>
+
+            <div id="simResults" style="margin-top:1.25rem;display:none;">
+                <div class="data-table-wrap" style="margin-bottom:0">
+                    <div class="data-table-header">
+                        <div class="data-table-title">Comparativa: Actual vs Simulado</div>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table class="comparison-table" id="simCompTable">
+                            <thead><tr>
+                                <th>Grado</th>
+                                <th>Créd./Conv (Actual)</th>
+                                <th>Créd./Conv (Simulado)</th>
+                                <th>Δ Créditos</th>
+                                <th>$/Usuario/Año (Actual)</th>
+                                <th>$/Usuario/Año (Simulado)</th>
+                                <th>Δ Ahorro</th>
+                            </tr></thead>
+                            <tbody id="simCompTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Capacity planner -->
+        <div class="projection-section">
+            <div class="projection-title">📐 Planificador de Capacidad</div>
+            <p style="color:var(--text-secondary);font-size:.82rem;margin-bottom:1rem;">
+                Ingresa la cantidad de usuarios para estimar el costo total anual con la configuración actual y la simulada.
+            </p>
+            <div class="sim-input-row">
+                <div class="ctrl-group">
+                    <label>Distribución</label>
+                    <select class="ctrl-select" id="capDistMode">
+                        <option value="even">Equilibrada (igual por grado)</option>
+                        <option value="custom">Personalizada (por grado)</option>
+                    </select>
+                </div>
+                <div class="ctrl-group" id="capGlobalUsersWrap">
+                    <label>Usuarios Totales</label>
+                    <input type="number" class="ctrl-input" id="capGlobalUsers" value="100" min="1" style="width:100px">
+                </div>
+                <div class="ctrl-group">
+                    <label>Conv./Año por Usuario</label>
+                    <input type="number" class="ctrl-input" id="capConvsYear" value="80" min="1" style="width:100px">
+                    <span style="font-size:.65rem;color:var(--text-muted)">Máx ~96 (2/sem × 48 sem)</span>
+                </div>
+                <button class="btn btn-success" onclick="runCapacity()">📊 Calcular</button>
+            </div>
+            <div id="capPerGradeInputs" style="display:none;margin-bottom:1rem;">
+                <!-- dynamically generated per-grade user inputs -->
+            </div>
+            <div id="capResults" style="display:none">
+                <div class="metrics-row" id="capMetrics"></div>
+                <div style="overflow-x:auto;margin-top:1rem">
+                    <table class="comparison-table" id="capTable">
+                        <thead><tr>
+                            <th>Grado</th>
+                            <th class="text-right">Usuarios</th>
+                            <th class="text-right">Créditos/Año (Actual)</th>
+                            <th class="text-right">Costo/Año (Actual)</th>
+                            <th class="text-right">Créditos/Año (Simulado)</th>
+                            <th class="text-right">Costo/Año (Simulado)</th>
+                        </tr></thead>
+                        <tbody id="capTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- end app-shell -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   CONFIGURATION
+   ═══════════════════════════════════════════════════════════ */
+
+const PROXY_URL = "https://voiceflow-analytics.chat-gpt-bc7.workers.dev";
+const API_BASE = "https://analytics-api.voiceflow.com";
+const PLAN_TOTAL_CREDITS = 2_400_000;
+const PLAN_COST_USD = 10_800;
+const CREDIT_TO_USD = PLAN_COST_USD / PLAN_TOTAL_CREDITS; // $0.0045
+
+// Sessions config: max 2 convs/week, max 2 hrs each
+const MAX_CONVS_PER_WEEK = 2;
+const WEEKS_PER_YEAR = 48; // ~48 active school weeks
+const MAX_CONVS_PER_YEAR = MAX_CONVS_PER_WEEK * WEEKS_PER_YEAR;
+
+// Projects → grades
+const PROJECTS = [
+    { name:"Xolo 2.0 - 3", grade:3, id:"69648a3142fb1cac823bd719", key:"VF.DM.69648b19774372ae83b64a6f.Gxyvv88zdFVvrfhL" },
+    { name:"Xolo 2.0 - 4", grade:4, id:"696467d942fb1cac823bd1e3", key:"VF.DM.696485c0aeb01b0b69b6a670.GW6aEdVYlOCsmKgi" },
+    { name:"Xolo 2.0 - 5", grade:5, id:"696467a542fb1cac823bd1d7", key:"VF.DM.6964854eb6139e75b888f46d.xdHG0G0Nuyvkinz5" },
+    { name:"Xolo 2.0 - 6", grade:6, id:"696467c442fb1cac823bd1de", key:"VF.DM.6964842142cf44d88c7bc011.A7CKjUYFqJBBzz9I" },
+    { name:"Xolo 2.0 - 7", grade:7, id:"69648b3442fb1cac823bd724", key:"VF.DM.69649147b6139e75b888f470.VxjRlJ1aUQQ0XSmW" },
+    { name:"Xolo 2.0 - 8", grade:8, id:"6964915b42fb1cac823bd760", key:"VF.DM.696492ee3de508144d819027.li2BDyTMZLRxqJMf" },
+    { name:"Xolo 2.0 - 9", grade:9, id:"69648b5842fb1cac823bd729", key:"VF.DM.69648e9ab6139e75b888f46e.NS8oW3YkgnPW7Fqm" },
+    { name:"Xolo 2.0 - 10", grade:10, id:"6964931942fb1cac823bd788", key:"VF.DM.69649443b6139e75b888f471.OztVLPOnLPZbPdTz" },
+    { name:"Xolo 2.0 - 11", grade:11, id:"6964947942fb1cac823bd7a6", key:"VF.DM.696494d7fbbabc183d666b77.bsj9cKB680jegVI2" },
+    { name:"Xolo 2.0 - 12", grade:12, id:"6964948942fb1cac823bd7ab", key:"VF.DM.6964952daeb01b0b69b6a672.axrKSvL4BDs6LUgO" }
+];
+
+// ═══════════════════════════════════════════════════════════
+// CREDIT PRICING MODEL
+// ═══════════════════════════════════════════════════════════
+// Credits per 1K tokens
+const MODEL_PRICING = {
+    // Anthropic
+    "claude-3.5-haiku":       { vendor:"Anthropic", output:1, input:0.2 },
+    "claude-4.5-haiku":       { vendor:"Anthropic", output:1.25, input:0.25 },
+    "claude-4.5-opus":        { vendor:"Anthropic", output:6.25, input:1.25 },
+    "claude-4-opus":          { vendor:"Anthropic", output:18.75, input:3.75 },
+    "claude-4-sonnet":        { vendor:"Anthropic", output:3.75, input:0.75 },
+    "claude-4.5-sonnet":      { vendor:"Anthropic", output:3.75, input:0.75 },
+    // Google
+    "gemini-2.0-flash":       { vendor:"Google", output:0.1, input:0.025 },
+    "gemini-2.5-flash":       { vendor:"Google", output:0.625, input:0.075 },
+    "gemini-2.5-pro":         { vendor:"Google", output:2.5, input:0.3125 },
+    // Groq
+    "llama-3.1-8b":           { vendor:"Groq", output:0.02, input:0.0125 },
+    "llama-3.3-70b":          { vendor:"Groq", output:0.1975, input:0.1475 },
+    // OpenAI
+    "gpt-4o":                 { vendor:"OpenAI", output:2.5, input:0.625 },
+    "gpt-4o-mini":            { vendor:"OpenAI", output:0.15, input:0.0375 },
+    "gpt-4.1":                { vendor:"OpenAI", output:2, input:0.5 },
+    "gpt-4.1-mini":           { vendor:"OpenAI", output:0.4, input:0.1 },
+    "gpt-4.1-nano":           { vendor:"OpenAI", output:0.1, input:0.025 },
+    "gpt-5":                  { vendor:"OpenAI", output:2.5, input:0.3125 },
+    "gpt-5-mini":             { vendor:"OpenAI", output:0.5, input:0.0625 },
+    "o3":                     { vendor:"OpenAI", output:2, input:0.5 },
+    "o3-mini":                { vendor:"OpenAI", output:1.1, input:0.275 },
+    "o4-mini":                { vendor:"OpenAI", output:1.1, input:0.275 },
+};
+
+// Estimated credits PER MESSAGE for each model (LLM portion only, excl. orchestration)
+// Based on typical chatbot usage: ~500 input tokens, ~350 output tokens per message
+const AVG_INPUT_TOKENS = 0.5; // in thousands
+const AVG_OUTPUT_TOKENS = 0.35; // in thousands
+
+function calcCreditsPerMsg(modelKey) {
+    const m = MODEL_PRICING[modelKey];
+    if (!m) return 0;
+    return (m.input * AVG_INPUT_TOKENS) + (m.output * AVG_OUTPUT_TOKENS);
+}
+
+// Pre-compute credits per message for all models
+const CREDITS_PER_MSG = {};
+Object.keys(MODEL_PRICING).forEach(k => {
+    CREDITS_PER_MSG[k] = calcCreditsPerMsg(k);
+});
+
+// The "Orchestration" always costs 1 credit per message
+const ORCHESTRATION_CREDIT = 1;
+
+// ═══════════════════════════════════════════════════════════
+// TRACKABLE FEATURES/MODELS (for chip filters)
+// ═══════════════════════════════════════════════════════════
+const TRACKABLE_ITEMS = [
+    { key:"orchestration", label:"Chat Usage (Orq.)", color:"#6366f1", creditsPerMsg: ORCHESTRATION_CREDIT, isBase:true },
+    { key:"claude-4.5-haiku", label:"Claude 4.5 Haiku", color:"#e879a0", creditsPerMsg: CREDITS_PER_MSG["claude-4.5-haiku"] },
+    { key:"claude-4.5-sonnet", label:"Claude 4.5 Sonnet", color:"#f472b6", creditsPerMsg: CREDITS_PER_MSG["claude-4.5-sonnet"] },
+    { key:"claude-4.5-opus", label:"Claude 4.5 Opus", color:"#c084fc", creditsPerMsg: CREDITS_PER_MSG["claude-4.5-opus"] },
+    { key:"gemini-2.5-flash", label:"Gemini 2.5 Flash", color:"#34d399", creditsPerMsg: CREDITS_PER_MSG["gemini-2.5-flash"] },
+    { key:"gemini-2.5-pro", label:"Gemini 2.5 Pro", color:"#10b981", creditsPerMsg: CREDITS_PER_MSG["gemini-2.5-pro"] },
+    { key:"gemini-2.0-flash", label:"Gemini 2.0 Flash", color:"#6ee7b7", creditsPerMsg: CREDITS_PER_MSG["gemini-2.0-flash"] },
+    { key:"gpt-4o-mini", label:"GPT-4o Mini", color:"#60a5fa", creditsPerMsg: CREDITS_PER_MSG["gpt-4o-mini"] },
+    { key:"gpt-4.1-mini", label:"GPT-4.1 Mini", color:"#3b82f6", creditsPerMsg: CREDITS_PER_MSG["gpt-4.1-mini"] },
+    { key:"gpt-4.1-nano", label:"GPT-4.1 Nano", color:"#93c5fd", creditsPerMsg: CREDITS_PER_MSG["gpt-4.1-nano"] },
+];
+
+// Current model configuration (what the chatbot actually uses now)
+// This represents the weighted mix of models per interaction
+// The user said: primarily Claude 4.5 Haiku + Gemini 2.5 Flash for some processes
+const CURRENT_MODEL_MIX = [
+    { key:"orchestration", weight: 1.0 }, // always 100% — 1 credit per message
+    { key:"claude-4.5-haiku", weight: 0.70 }, // 70% of LLM calls use Haiku
+    { key:"gemini-2.5-flash", weight: 0.30 }, // 30% of LLM calls use Flash
+];
+
+// ═══════════════════════════════════════════════════════════
+// APPLICATION STATE
+// ═══════════════════════════════════════════════════════════
+let STATE = {
+    rawData: [],        // Array of per-project fetched data
+    activeTab: "dashboard",
+    activeUnit: "credits", // credits | messages | cost
+    activeModels: new Set(TRACKABLE_ITEMS.map(i => i.key)), // all active initially
+    charts: {},         // Chart.js instances
+    simModels: [],      // simulation model mix
+    loaded: false,
+};
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+    // Set end date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('endDate').value = today;
+    document.getElementById('startDate').value = '2025-01-05';
+
+    // Render model filter chips
+    renderModelChips();
+
+    // Tab clicks
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Unit toggle
+    document.querySelectorAll('#unitToggle .toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#unitToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            STATE.activeUnit = btn.dataset.unit;
+            if (STATE.loaded) renderAll();
+        });
+    });
+
+    // Period preset
+    document.getElementById('periodPreset').addEventListener('change', handlePeriodChange);
+
+    // Capacity distribution mode
+    document.getElementById('capDistMode').addEventListener('change', (e) => {
+        document.getElementById('capGlobalUsersWrap').style.display = e.target.value === 'even' ? '' : 'none';
+        document.getElementById('capPerGradeInputs').style.display = e.target.value === 'custom' ? '' : 'none';
+        if (e.target.value === 'custom') renderCapPerGradeInputs();
+    });
+
+    // Init simulation model entries
+    addSimModelEntry('claude-4.5-haiku', 70);
+    addSimModelEntry('gemini-2.5-flash', 30);
+
+    hideLoading();
+});
+
+// ═══════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════
+function switchTab(tabId) {
+    STATE.activeTab = tabId;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
+
+    // If grade tab, render grade-specific view
+    if (tabId.startsWith('grade-') && STATE.loaded) {
+        const grade = parseInt(tabId.split('-')[1]);
+        renderGradeTab(grade);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// PERIOD PRESETS
+// ═══════════════════════════════════════════════════════════
+function handlePeriodChange() {
+    const val = document.getElementById('periodPreset').value;
+    const customStart = document.getElementById('customDateStart');
+    const customEnd = document.getElementById('customDateEnd');
+    const today = new Date();
+
+    if (val === 'custom') {
+        customStart.style.display = '';
+        customEnd.style.display = '';
+        return;
+    }
+
+    customStart.style.display = 'none';
+    customEnd.style.display = 'none';
+
+    let start;
+    switch(val) {
+        case 'this_month':
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            break;
+        case 'last_month':
+            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const endLM = new Date(today.getFullYear(), today.getMonth(), 0);
+            document.getElementById('endDate').value = endLM.toISOString().split('T')[0];
+            document.getElementById('startDate').value = start.toISOString().split('T')[0];
+            return;
+        case 'last_3':
+            start = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+            break;
+        case 'last_6':
+            start = new Date(today.getFullYear(), today.getMonth() - 6, 1);
+            break;
+        case 'all':
+            start = new Date('2025-01-05');
+            break;
+    }
+    document.getElementById('startDate').value = start.toISOString().split('T')[0];
+    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODEL FILTER CHIPS
+// ═══════════════════════════════════════════════════════════
+function renderModelChips() {
+    const container = document.getElementById('modelFilters');
+    let html = '<div class="chip-filters-label">Filtrar por modelo / característica</div>';
+    html += '<div class="chip chip-all active" onclick="toggleAllChips(this)">Todos</div>';
+    TRACKABLE_ITEMS.forEach(item => {
+        const active = STATE.activeModels.has(item.key) ? 'active' : '';
+        html += `<div class="chip ${active}" data-model="${item.key}" onclick="toggleChip(this)" style="--chip-color:${item.color}">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${item.color};margin-right:4px;"></span>
+            ${item.label} <span style="font-family:var(--font-mono);font-size:.65rem;opacity:.7">(${item.creditsPerMsg.toFixed(3)}/msg)</span>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function toggleChip(el) {
+    const key = el.dataset.model;
+    el.classList.toggle('active');
+    if (el.classList.contains('active')) {
+        STATE.activeModels.add(key);
+    } else {
+        STATE.activeModels.delete(key);
+    }
+    // Update "all" chip
+    const allChip = document.querySelector('.chip-all');
+    allChip.classList.toggle('active', STATE.activeModels.size === TRACKABLE_ITEMS.length);
+    if (STATE.loaded) renderAll();
+}
+
+function toggleAllChips(el) {
+    const allActive = STATE.activeModels.size === TRACKABLE_ITEMS.length;
+    document.querySelectorAll('.chip[data-model]').forEach(c => {
+        if (allActive) {
+            c.classList.remove('active');
+            STATE.activeModels.delete(c.dataset.model);
+        } else {
+            c.classList.add('active');
+            STATE.activeModels.add(c.dataset.model);
+        }
+    });
+    el.classList.toggle('active', !allActive);
+    if (STATE.loaded) renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════
+// API FETCHING
+// ═══════════════════════════════════════════════════════════
+function getApiUrl(path) {
+    return `${PROXY_URL}${path}`;
+}
+
+async function fetchAllPages(project, queryName, startTime, endTime) {
+    let allItems = [];
+    let cursor = null;
+    let hasMore = true;
+    let pages = 0;
+
+    while (hasMore) {
+        const body = {
+            data: {
+                name: queryName,
+                filter: {
+                    projectID: project.id,
+                    startTime,
+                    endTime,
+                    limit: 500
+                }
+            }
+        };
+        if (cursor) body.data.filter.cursor = cursor;
+
+        const resp = await fetch(getApiUrl('/v2/query/usage'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': project.key
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+
+        const data = await resp.json();
+        if (data.result && data.result.items) {
+            allItems = allItems.concat(data.result.items);
+            cursor = data.result.cursor;
+            hasMore = !!cursor && data.result.items.length > 0;
+        } else {
+            hasMore = false;
+        }
+        pages++;
+        if (pages > 50) break; // safety
+    }
+    return allItems;
+}
+
+async function fetchProjectData(project, startTime, endTime) {
+    try {
+        const [interactionsData, usersData] = await Promise.all([
+            fetchAllPages(project, 'interactions', startTime, endTime),
+            fetchAllPages(project, 'unique_users', startTime, endTime),
+        ]);
+
+        const dailyStats = {};
+        interactionsData.forEach(item => {
+            const day = item.period.split('T')[0];
+            if (!dailyStats[day]) dailyStats[day] = { interactions: 0, users: 0 };
+            dailyStats[day].interactions += item.count;
+        });
+        usersData.forEach(item => {
+            const day = item.period.split('T')[0];
+            if (!dailyStats[day]) dailyStats[day] = { interactions: 0, users: 0 };
+            dailyStats[day].users += item.count;
+        });
+
+        const totalInteractions = interactionsData.reduce((s, i) => s + i.count, 0);
+        const totalUsers = usersData.reduce((s, i) => s + i.count, 0);
+
+        return {
+            project: project.name,
+            grade: project.grade,
+            projectId: project.id,
+            interactions: totalInteractions,
+            users: totalUsers,
+            average: totalUsers > 0 ? totalInteractions / totalUsers : 0,
+            dailyStats,
+        };
+    } catch (err) {
+        console.error(`Error: ${project.name}:`, err);
+        return {
+            project: project.name,
+            grade: project.grade,
+            projectId: project.id,
+            interactions: 0,
+            users: 0,
+            average: 0,
+            dailyStats: {},
+            error: err.message
+        };
+    }
+}
+
+async function fetchAllData() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    if (!startDate || !endDate) { alert('Selecciona fechas'); return; }
+
+    const startTime = new Date(startDate).toISOString();
+    const endTime = new Date(endDate + 'T23:59:59').toISOString();
+
+    showLoading();
+    setStatus('loading', 'Cargando...');
+
+    try {
+        let completed = 0;
+        const total = PROJECTS.length;
+
+        const results = [];
+        for (const proj of PROJECTS) {
+            completed++;
+            updateLoadingProgress(`Proyecto ${completed}/${total}: ${proj.name}`);
+            const data = await fetchProjectData(proj, startTime, endTime);
+            results.push(data);
+        }
+
+        STATE.rawData = results;
+        STATE.loaded = true;
+        setStatus('', 'Datos cargados');
+        renderAll();
+    } catch (err) {
+        console.error('Fetch error:', err);
+        setStatus('error', 'Error');
+        alert('Error al cargar datos: ' + err.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANALYTICS ENGINE
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Calculate credit breakdown for a given message count using a model mix.
+ * Returns { orchestration, llm: { [modelKey]: credits }, total }
+ */
+function calcCredits(messages, modelMix = CURRENT_MODEL_MIX) {
+    const result = { orchestration: 0, llm: {}, total: 0, byModel: {} };
+
+    modelMix.forEach(entry => {
+        const item = TRACKABLE_ITEMS.find(t => t.key === entry.key);
+        if (!item) return;
+
+        if (entry.key === 'orchestration') {
+            result.orchestration = messages * ORCHESTRATION_CREDIT * entry.weight;
+            result.byModel['orchestration'] = result.orchestration;
+        } else {
+            const credits = messages * item.creditsPerMsg * entry.weight;
+            result.llm[entry.key] = credits;
+            result.byModel[entry.key] = credits;
+        }
+    });
+
+    result.total = result.orchestration + Object.values(result.llm).reduce((s, v) => s + v, 0);
+    return result;
+}
+
+/** Calculate weighted avg credits per message for a model mix */
+function weightedCreditsPerMsg(modelMix = CURRENT_MODEL_MIX) {
+    let total = 0;
+    modelMix.forEach(entry => {
+        const item = TRACKABLE_ITEMS.find(t => t.key === entry.key);
+        if (item) total += item.creditsPerMsg * entry.weight;
+    });
+    return total;
+}
+
+/** Aggregate daily data across projects (optionally filter by grade) */
+function aggregateDaily(grade = null) {
+    const daily = {};
+    STATE.rawData.forEach(proj => {
+        if (grade !== null && proj.grade !== grade) return;
+        Object.entries(proj.dailyStats).forEach(([day, stats]) => {
+            if (!daily[day]) daily[day] = { interactions: 0, users: 0 };
+            daily[day].interactions += stats.interactions;
+            daily[day].users += stats.users;
+        });
+    });
+    return daily;
+}
+
+/** Aggregate monthly data */
+function aggregateMonthly(grade = null) {
+    const daily = aggregateDaily(grade);
+    const monthly = {};
+    Object.entries(daily).forEach(([day, stats]) => {
+        const month = day.substring(0, 7);
+        if (!monthly[month]) monthly[month] = { interactions: 0, users: 0 };
+        monthly[month].interactions += stats.interactions;
+        monthly[month].users += stats.users;
+    });
+    return monthly;
+}
+
+/** Get totals (optionally filtered by grade) */
+function getTotals(grade = null) {
+    let interactions = 0, users = 0;
+    STATE.rawData.forEach(proj => {
+        if (grade !== null && proj.grade !== grade) return;
+        interactions += proj.interactions;
+        users += proj.users;
+    });
+    return { interactions, users, average: users > 0 ? interactions / users : 0 };
+}
+
+/** Apply active model filters to credit calculation */
+function getFilteredCreditsPerMsg() {
+    let total = 0;
+    CURRENT_MODEL_MIX.forEach(entry => {
+        if (!STATE.activeModels.has(entry.key)) return;
+        const item = TRACKABLE_ITEMS.find(t => t.key === entry.key);
+        if (item) total += item.creditsPerMsg * entry.weight;
+    });
+    return total;
+}
+
+/** Convert value based on active unit */
+function formatValue(credits, forceUnit = null) {
+    const unit = forceUnit || STATE.activeUnit;
+    switch (unit) {
+        case 'credits': return fmtNum(credits);
+        case 'messages': {
+            const cpm = weightedCreditsPerMsg();
+            return cpm > 0 ? fmtNum(credits / cpm) : '—';
+        }
+        case 'cost': return '$' + fmtNum(credits * CREDIT_TO_USD, 2);
+        default: return fmtNum(credits);
+    }
+}
+
+function getUnitLabel() {
+    switch (STATE.activeUnit) {
+        case 'credits': return 'créditos';
+        case 'messages': return 'mensajes est.';
+        case 'cost': return 'USD';
+        default: return '';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════════════════════════
+
+function renderAll() {
+    renderGlobalMetrics();
+    renderMonthlyTable();
+    renderCharts();
+    renderInsights();
+    renderPerUserTable();
+    renderProjectionsCurrent();
+
+    // If a grade tab is active, render it too
+    if (STATE.activeTab.startsWith('grade-')) {
+        const grade = parseInt(STATE.activeTab.split('-')[1]);
+        renderGradeTab(grade);
+    }
+}
+
+// --- GLOBAL METRICS ---
+function renderGlobalMetrics() {
+    const totals = getTotals();
+    const creditsPerMsg = getFilteredCreditsPerMsg();
+    const totalCredits = totals.interactions * creditsPerMsg;
+
+    const remaining = PLAN_TOTAL_CREDITS - totalCredits;
+    const pctUsed = (totalCredits / PLAN_TOTAL_CREDITS * 100);
+
+    const monthly = aggregateMonthly();
+    const months = Object.keys(monthly).sort();
+    const monthCredits = months.map(m => monthly[m].interactions * creditsPerMsg);
+    const avgBurn = monthCredits.length > 0 ? monthCredits.reduce((a, b) => a + b, 0) / monthCredits.length : 0;
+    const monthsLeft = avgBurn > 0 ? remaining / avgBurn : Infinity;
+
+    const avgCreditsPerConv = totals.users > 0 ? totalCredits / totals.users : 0;
+
+    const set = (id, val, sub) => {
+        document.getElementById(id).textContent = val;
+        const subEl = document.getElementById(id + 'Sub');
+        if (subEl && sub) subEl.textContent = sub;
+    };
+
+    set('kpiTotalCredits', formatValue(totalCredits), `${pctUsed.toFixed(1)}% del plan utilizado`);
+    set('kpiRemaining', formatValue(remaining), remaining < 0 ? '⚠️ Plan excedido' : `${(100 - pctUsed).toFixed(1)}% disponible`);
+    set('kpiAvgConv', formatValue(avgCreditsPerConv), `por conversación (${getUnitLabel()})`);
+    set('kpiBurnRate', formatValue(avgBurn), `promedio mensual (${getUnitLabel()})`);
+    set('kpiTotalMsgs', fmtNum(totals.interactions), `interacciones totales`);
+    set('kpiTotalConvs', fmtNum(totals.users), `conversaciones únicas`);
+    set('kpiMsgsPerConv', totals.average.toFixed(1), `mensajes/conversación`);
+    set('kpiMonthsLeft', monthsLeft === Infinity ? '∞' : monthsLeft.toFixed(1), avgBurn > 0 ? `al ritmo actual de ${fmtNum(avgBurn, 0)} créd/mes` : '');
+
+    // Color warnings
+    const remEl = document.getElementById('kpiRemaining');
+    remEl.style.color = remaining < 0 ? 'var(--accent-rose)' : remaining < 200000 ? 'var(--accent-amber)' : 'var(--accent-emerald)';
+
+    const mlEl = document.getElementById('kpiMonthsLeft');
+    mlEl.style.color = monthsLeft < 2 ? 'var(--accent-rose)' : monthsLeft < 6 ? 'var(--accent-amber)' : 'var(--accent-orange)';
+}
+
+// --- MONTHLY TABLE ---
+function renderMonthlyTable() {
+    const monthly = aggregateMonthly();
+    const months = Object.keys(monthly).sort();
+    const tbody = document.getElementById('monthlyTableBody');
+    const creditsPerMsg = getFilteredCreditsPerMsg();
+    const orchWeight = CURRENT_MODEL_MIX.find(m => m.key === 'orchestration')?.weight || 1;
+    const orchCredPerMsg = ORCHESTRATION_CREDIT * orchWeight;
+    const llmCredPerMsg = creditsPerMsg - orchCredPerMsg;
+
+    if (months.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr>';
+        return;
+    }
+
+    let prevTotal = null;
+    tbody.innerHTML = months.map(month => {
+        const d = monthly[month];
+        const orchCredits = d.interactions * orchCredPerMsg;
+        const llmCredits = d.interactions * llmCredPerMsg;
+        const total = orchCredits + llmCredits;
+        const cost = total * CREDIT_TO_USD;
+
+        let trend = '—';
+        if (prevTotal !== null) {
+            const diff = total - prevTotal;
+            const pct = prevTotal > 0 ? (diff / prevTotal * 100).toFixed(1) : 0;
+            if (diff > 0) trend = `<span class="metric-trend up">↑ +${pct}%</span>`;
+            else if (diff < 0) trend = `<span class="metric-trend down">↓ ${pct}%</span>`;
+            else trend = `<span style="color:var(--text-muted)">= 0%</span>`;
+        }
+        prevTotal = total;
+
+        const monthName = new Date(month + '-01').toLocaleDateString('es-MX', { year:'numeric', month:'long' });
+
+        return `<tr>
+            <td>${monthName}</td>
+            <td class="mono text-right">${fmtNum(d.interactions)}</td>
+            <td class="mono text-right">${fmtNum(d.users)}</td>
+            <td class="mono text-right">${fmtNum(orchCredits, 0)}</td>
+            <td class="mono text-right">${fmtNum(llmCredits, 0)}</td>
+            <td class="mono text-right" style="color:var(--accent-indigo)">${fmtNum(total, 0)}</td>
+            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(cost, 2)}</td>
+            <td>${trend}</td>
+        </tr>`;
+    }).join('');
+}
+
+// --- CHARTS ---
+function renderCharts() {
+    renderChartMonthlyCredits();
+    renderChartDailyTrend();
+    renderChartModelDist();
+    renderChartByGrade();
+}
+
+function destroyChart(key) {
+    if (STATE.charts[key]) { STATE.charts[key].destroy(); delete STATE.charts[key]; }
+}
+
+const CHART_COLORS = {
+    'orchestration': '#6366f1',
+    'claude-4.5-haiku': '#e879a0',
+    'claude-4.5-sonnet': '#f472b6',
+    'claude-4.5-opus': '#c084fc',
+    'gemini-2.5-flash': '#34d399',
+    'gemini-2.5-pro': '#10b981',
+    'gemini-2.0-flash': '#6ee7b7',
+    'gpt-4o-mini': '#60a5fa',
+    'gpt-4.1-mini': '#3b82f6',
+    'gpt-4.1-nano': '#93c5fd',
+};
+
+const CHART_DEFAULTS = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { labels: { color: '#8892a8', font: { family: "'DM Sans'", size: 11 }, boxWidth: 12, padding: 12 } },
+        tooltip: {
+            backgroundColor: '#1a2236',
+            borderColor: '#2a3550',
+            borderWidth: 1,
+            titleColor: '#e8ecf4',
+            bodyColor: '#8892a8',
+            titleFont: { family: "'DM Sans'", weight: 'bold' },
+            bodyFont: { family: "'JetBrains Mono'", size: 11 },
+            padding: 10,
+            cornerRadius: 8,
+        }
+    },
+    scales: {
+        x: { ticks: { color: '#5a6478', font: { family: "'DM Sans'", size: 10 } }, grid: { color: 'rgba(42,53,80,.3)' } },
+        y: { ticks: { color: '#5a6478', font: { family: "'JetBrains Mono'", size: 10 } }, grid: { color: 'rgba(42,53,80,.3)' } }
+    }
+};
+
+function renderChartMonthlyCredits() {
+    destroyChart('monthlyCredits');
+    const monthly = aggregateMonthly();
+    const months = Object.keys(monthly).sort();
+    if (months.length === 0) return;
+
+    const datasets = [];
+    CURRENT_MODEL_MIX.forEach(entry => {
+        if (!STATE.activeModels.has(entry.key)) return;
+        const item = TRACKABLE_ITEMS.find(t => t.key === entry.key);
+        if (!item) return;
+        datasets.push({
+            label: item.label,
+            data: months.map(m => monthly[m].interactions * item.creditsPerMsg * entry.weight),
+            backgroundColor: item.color + 'cc',
+            borderColor: item.color,
+            borderWidth: 1,
+        });
+    });
+
+    const ctx = document.getElementById('chartMonthlyCredits').getContext('2d');
+    STATE.charts.monthlyCredits = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months.map(m => new Date(m + '-01').toLocaleDateString('es-MX', { month: 'short', year: '2-digit' })),
+            datasets
+        },
+        options: {
+            ...CHART_DEFAULTS,
+            scales: { ...CHART_DEFAULTS.scales, x: { ...CHART_DEFAULTS.scales.x, stacked: true }, y: { ...CHART_DEFAULTS.scales.y, stacked: true } },
+            plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtNum(ctx.raw, 0)} créditos` } } }
+        }
+    });
+}
+
+function renderChartDailyTrend() {
+    destroyChart('dailyTrend');
+    const daily = aggregateDaily();
+    const days = Object.keys(daily).sort();
+    if (days.length === 0) return;
+
+    const creditsPerMsg = getFilteredCreditsPerMsg();
+    const values = days.map(d => daily[d].interactions * creditsPerMsg);
+
+    // 7-day moving average
+    const ma7 = values.map((_, i) => {
+        const start = Math.max(0, i - 6);
+        const slice = values.slice(start, i + 1);
+        return slice.reduce((a, b) => a + b, 0) / slice.length;
+    });
+
+    const ctx = document.getElementById('chartDailyTrend').getContext('2d');
+    STATE.charts.dailyTrend = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: days.map(d => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })),
+            datasets: [
+                {
+                    label: 'Créditos/día',
+                    data: values,
+                    borderColor: '#6366f180',
+                    backgroundColor: '#6366f115',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 1,
+                    borderWidth: 1.5,
+                },
+                {
+                    label: 'Media móvil 7d',
+                    data: ma7,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    borderDash: [5, 3],
+                }
+            ]
+        },
+        options: {
+            ...CHART_DEFAULTS,
+            plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtNum(ctx.raw, 0)} créditos` } } }
+        }
+    });
+}
+
+function renderChartModelDist() {
+    destroyChart('modelDist');
+    const totals = getTotals();
+    if (totals.interactions === 0) return;
+
+    const labels = [];
+    const data = [];
+    const colors = [];
+
+    CURRENT_MODEL_MIX.forEach(entry => {
+        if (!STATE.activeModels.has(entry.key)) return;
+        const item = TRACKABLE_ITEMS.find(t => t.key === entry.key);
+        if (!item) return;
+        const credits = totals.interactions * item.creditsPerMsg * entry.weight;
+        labels.push(item.label);
+        data.push(credits);
+        colors.push(item.color);
+    });
+
+    const ctx = document.getElementById('chartModelDist').getContext('2d');
+    STATE.charts.modelDist = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: '#1a2236', borderWidth: 2 }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', labels: { color: '#8892a8', font: { family: "'DM Sans'", size: 11 }, padding: 10, boxWidth: 12 } },
+                tooltip: { ...CHART_DEFAULTS.plugins.tooltip, callbacks: { label: ctx => { const pct = (ctx.raw / data.reduce((a,b)=>a+b,0) * 100).toFixed(1); return `${ctx.label}: ${fmtNum(ctx.raw,0)} créd (${pct}%)`; } } }
+            }
+        }
+    });
+}
+
+function renderChartByGrade() {
+    destroyChart('byGrade');
+    const creditsPerMsg = getFilteredCreditsPerMsg();
+    const labels = [];
+    const data = [];
+    const colors = ['#6366f1','#8b5cf6','#a855f7','#c084fc','#34d399','#10b981','#06b6d4','#3b82f6','#f59e0b','#f97316'];
+
+    PROJECTS.forEach((p, i) => {
+        const proj = STATE.rawData.find(r => r.grade === p.grade);
+        if (!proj) return;
+        labels.push(`${p.grade}°`);
+        data.push(proj.interactions * creditsPerMsg);
+    });
+
+    const ctx = document.getElementById('chartByGrade').getContext('2d');
+    STATE.charts.byGrade = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{ label: 'Créditos por grado', data, backgroundColor: colors.map(c => c + 'cc'), borderColor: colors, borderWidth: 1 }]
+        },
+        options: {
+            ...CHART_DEFAULTS,
+            plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false }, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, callbacks: { label: ctx => `${fmtNum(ctx.raw,0)} créditos` } } }
+        }
+    });
+}
+
+// --- INSIGHTS ---
+function renderInsights() {
+    const totals = getTotals();
+    const creditsPerMsg = getFilteredCreditsPerMsg();
+    const totalCredits = totals.interactions * creditsPerMsg;
+    const remaining = PLAN_TOTAL_CREDITS - totalCredits;
+
+    const monthly = aggregateMonthly();
+    const months = Object.keys(monthly).sort();
+    const monthCredits = months.map(m => monthly[m].interactions * creditsPerMsg);
+    const avgBurn = monthCredits.length > 0 ? monthCredits.reduce((a,b)=>a+b,0) / monthCredits.length : 0;
+
+    // Peak detection
+    let peakMonth = '', peakCredits = 0;
+    months.forEach(m => {
+        const c = monthly[m].interactions * creditsPerMsg;
+        if (c > peakCredits) { peakCredits = c; peakMonth = m; }
+    });
+
+    // Grade with highest usage
+    let topGrade = null, topGradeCredits = 0;
+    STATE.rawData.forEach(p => {
+        const c = p.interactions * creditsPerMsg;
+        if (c > topGradeCredits) { topGradeCredits = c; topGrade = p; }
+    });
+
+    // Annual projection
+    const dailyCredits = aggregateDaily();
+    const totalDays = Object.keys(dailyCredits).length;
+    const avgDailyCredits = totalDays > 0 ? totalCredits / totalDays : 0;
+    const projAnnual = avgDailyCredits * 365;
+
+    const grid = document.getElementById('insightsGrid');
+    grid.innerHTML = `
+    <div class="insight-card">
+        <div class="insight-card-header">
+            <div class="insight-icon" style="background:rgba(244,63,94,.15)">⚠️</div>
+            <div class="insight-card-title">Estado del Plan</div>
+        </div>
+        <div class="insight-card-body">
+            Se han consumido <strong>${fmtNum(totalCredits,0)}</strong> créditos (${(totalCredits/PLAN_TOTAL_CREDITS*100).toFixed(1)}% del plan).
+            Quedan <strong>${fmtNum(Math.max(0,remaining),0)}</strong> créditos.
+            ${remaining < 0 ? '<br><span class="badge badge-danger">PLAN EXCEDIDO</span>' :
+              remaining < 200000 ? '<br><span class="badge badge-warning">Créditos bajos</span>' :
+              '<br><span class="badge badge-success">Dentro del plan</span>'}
+        </div>
+    </div>
+    <div class="insight-card">
+        <div class="insight-card-header">
+            <div class="insight-icon" style="background:rgba(99,102,241,.15)">📈</div>
+            <div class="insight-card-title">Proyección Anual</div>
+        </div>
+        <div class="insight-card-body">
+            Al ritmo actual de <strong>${fmtNum(avgDailyCredits,0)}</strong> créditos/día,
+            se proyectan <strong>${fmtNum(projAnnual,0)}</strong> créditos anuales
+            (<strong>$${fmtNum(projAnnual * CREDIT_TO_USD,2)}</strong> USD).
+            ${projAnnual > PLAN_TOTAL_CREDITS ?
+                `<br>Esto excede el plan por <strong>${fmtNum(projAnnual - PLAN_TOTAL_CREDITS,0)}</strong> créditos.` :
+                `<br>Esto está dentro del plan (${(projAnnual/PLAN_TOTAL_CREDITS*100).toFixed(1)}%).`}
+        </div>
+    </div>
+    <div class="insight-card">
+        <div class="insight-card-header">
+            <div class="insight-icon" style="background:rgba(245,158,11,.15)">🔥</div>
+            <div class="insight-card-title">Mes Pico</div>
+        </div>
+        <div class="insight-card-body">
+            El mes con mayor consumo fue <strong>${peakMonth ? new Date(peakMonth+'-01').toLocaleDateString('es-MX',{month:'long',year:'numeric'}) : 'N/A'}</strong>
+            con <strong>${fmtNum(peakCredits,0)}</strong> créditos ($${fmtNum(peakCredits*CREDIT_TO_USD,2)}).
+            ${peakCredits > avgBurn*1.5 ? '<br>Esto fue significativamente superior al promedio — posiblemente por modelos costosos.' : ''}
+        </div>
+    </div>
+    <div class="insight-card">
+        <div class="insight-card-header">
+            <div class="insight-icon" style="background:rgba(16,185,129,.15)">🏫</div>
+            <div class="insight-card-title">Grado con Mayor Uso</div>
+        </div>
+        <div class="insight-card-body">
+            <strong>${topGrade ? topGrade.project : 'N/A'}</strong> es el grado con mayor consumo:
+            <strong>${fmtNum(topGradeCredits,0)}</strong> créditos
+            con <strong>${topGrade ? fmtNum(topGrade.interactions) : 0}</strong> interacciones
+            y <strong>${topGrade ? fmtNum(topGrade.users) : 0}</strong> conversaciones.
+        </div>
+    </div>
+    <div class="insight-card">
+        <div class="insight-card-header">
+            <div class="insight-icon" style="background:rgba(6,182,212,.15)">💡</div>
+            <div class="insight-card-title">Eficiencia de Modelo</div>
+        </div>
+        <div class="insight-card-body">
+            La configuración actual promedia <strong>${creditsPerMsg.toFixed(3)}</strong> créditos/mensaje.
+            Con Claude 4.5 Haiku al 70% + Gemini Flash al 30%, cada conversación de
+            <strong>${totals.average.toFixed(0)}</strong> msgs cuesta aprox.
+            <strong>${fmtNum(totals.average * creditsPerMsg,1)}</strong> créditos
+            ($${fmtNum(totals.average * creditsPerMsg * CREDIT_TO_USD,4)}).
+        </div>
+    </div>
+    <div class="insight-card">
+        <div class="insight-card-header">
+            <div class="insight-icon" style="background:rgba(139,92,246,.15)">⏱️</div>
+            <div class="insight-card-title">Volatilidad de Uso</div>
+        </div>
+        <div class="insight-card-body">
+            ${months.length >= 2 ? (() => {
+                const stdev = Math.sqrt(monthCredits.reduce((s,v) => s + Math.pow(v - avgBurn, 2), 0) / monthCredits.length);
+                const cv = avgBurn > 0 ? (stdev / avgBurn * 100).toFixed(1) : 0;
+                return `La variabilidad mensual es del <strong>${cv}%</strong> (desv. estándar: ${fmtNum(stdev,0)} créditos).
+                    ${cv > 50 ? '<br>Alta volatilidad — refleja los cambios de modelo durante la experimentación.' :
+                     cv > 25 ? '<br>Volatilidad moderada — el uso se está estabilizando.' :
+                     '<br>Baja volatilidad — el uso es consistente.'}`;
+            })() : 'Datos insuficientes para analizar volatilidad.'}
+        </div>
+    </div>
+    `;
+}
+
+// --- PER USER TABLE ---
+function renderPerUserTable() {
+    const tbody = document.getElementById('perUserTableBody');
+    const creditsPerMsg = getFilteredCreditsPerMsg();
+
+    const rows = PROJECTS.map(p => {
+        const proj = STATE.rawData.find(r => r.grade === p.grade);
+        if (!proj || proj.users === 0) return null;
+
+        const avgMsgsPerConv = proj.average;
+        const credPerConv = avgMsgsPerConv * creditsPerMsg;
+        const credPerWeek = credPerConv * MAX_CONVS_PER_WEEK;
+        const credPerMonth = credPerWeek * 4.33;
+        const credPerYear = credPerConv * MAX_CONVS_PER_YEAR;
+
+        return `<tr>
+            <td><strong>${p.grade}°</strong></td>
+            <td class="mono text-right">${fmtNum(credPerConv,1)}</td>
+            <td class="mono text-right">${fmtNum(credPerWeek,1)}</td>
+            <td class="mono text-right">${fmtNum(credPerMonth,0)}</td>
+            <td class="mono text-right">${fmtNum(credPerYear,0)}</td>
+            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(credPerWeek*CREDIT_TO_USD,3)}</td>
+            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(credPerMonth*CREDIT_TO_USD,2)}</td>
+            <td class="mono text-right" style="color:var(--accent-amber)">$${fmtNum(credPerYear*CREDIT_TO_USD,2)}</td>
+        </tr>`;
+    }).filter(Boolean);
+
+    tbody.innerHTML = rows.length > 0 ? rows.join('') : '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// GRADE TAB RENDERING
+// ═══════════════════════════════════════════════════════════
+
+function renderGradeTab(grade) {
+    const container = document.getElementById(`tab-grade-${grade}`);
+    const proj = STATE.rawData.find(r => r.grade === grade);
+
+    if (!proj || proj.interactions === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">No hay datos para el grado ${grade}° en el período seleccionado</div></div>`;
+        return;
+    }
+
+    const creditsPerMsg = getFilteredCreditsPerMsg();
+    const totalCredits = proj.interactions * creditsPerMsg;
+    const avgCreditsPerConv = proj.users > 0 ? totalCredits / proj.users : 0;
+
+    const daily = {};
+    Object.entries(proj.dailyStats).forEach(([day, stats]) => {
+        daily[day] = stats;
+    });
+    const days = Object.keys(daily).sort();
+
+    const monthly = {};
+    days.forEach(day => {
+        const m = day.substring(0, 7);
+        if (!monthly[m]) monthly[m] = { interactions: 0, users: 0 };
+        monthly[m].interactions += daily[day].interactions;
+        monthly[m].users += daily[day].users;
+    });
+
+    const canvasId = `chartGrade${grade}`;
+
+    container.innerHTML = `
+    <div class="metrics-row">
+        <div class="metric-card mc-indigo">
+            <div class="metric-label">Total Créditos <span class="info-icon" data-tooltip="Créditos totales para grado ${grade}°: ${proj.interactions} mensajes × ${creditsPerMsg.toFixed(3)} créditos/msg">i</span></div>
+            <div class="metric-value">${formatValue(totalCredits)}</div>
+            <div class="metric-sub">${getUnitLabel()}</div>
+        </div>
+        <div class="metric-card mc-cyan">
+            <div class="metric-label">Interacciones <span class="info-icon" data-tooltip="Mensajes totales enviados en este grado">i</span></div>
+            <div class="metric-value">${fmtNum(proj.interactions)}</div>
+        </div>
+        <div class="metric-card mc-emerald">
+            <div class="metric-label">Conversaciones <span class="info-icon" data-tooltip="Usuarios únicos por día">i</span></div>
+            <div class="metric-value">${fmtNum(proj.users)}</div>
+        </div>
+        <div class="metric-card mc-amber">
+            <div class="metric-label">Créd./Conversación <span class="info-icon" data-tooltip="Promedio de créditos por conversación = ${totalCredits.toFixed(0)} ÷ ${proj.users}">i</span></div>
+            <div class="metric-value">${fmtNum(avgCreditsPerConv, 1)}</div>
+        </div>
+        <div class="metric-card mc-violet">
+            <div class="metric-label">Msgs/Conversación <span class="info-icon" data-tooltip="${proj.interactions} interacciones ÷ ${proj.users} conversaciones">i</span></div>
+            <div class="metric-value">${proj.average.toFixed(1)}</div>
+        </div>
+        <div class="metric-card mc-orange">
+            <div class="metric-label">Costo Est. <span class="info-icon" data-tooltip="${fmtNum(totalCredits,0)} créditos × $${CREDIT_TO_USD.toFixed(4)}/crédito">i</span></div>
+            <div class="metric-value" style="color:var(--accent-emerald)">$${fmtNum(totalCredits * CREDIT_TO_USD, 2)}</div>
+        </div>
+    </div>
+
+    <div class="two-col">
+        <div class="chart-panel">
+            <div class="chart-panel-header">
+                <div class="chart-panel-title">📈 Créditos Diarios — Grado ${grade}°</div>
+            </div>
+            <div class="chart-wrap"><canvas id="${canvasId}Daily"></canvas></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-panel-header">
+                <div class="chart-panel-title">📊 Distribución Mensual — Grado ${grade}°</div>
+            </div>
+            <div class="chart-wrap"><canvas id="${canvasId}Monthly"></canvas></div>
+        </div>
+    </div>
+
+    <div class="data-table-wrap">
+        <div class="data-table-header">
+            <div class="data-table-title">📅 Detalle Mensual — Grado ${grade}°</div>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Mes</th>
+                    <th class="text-right">Mensajes</th>
+                    <th class="text-right">Conversaciones</th>
+                    <th class="text-right">Créditos</th>
+                    <th class="text-right">Costo Est.</th>
+                    <th class="text-right">Msgs/Conv</th>
+                </tr></thead>
+                <tbody>
+                    ${Object.keys(monthly).sort().map(m => {
+                        const md = monthly[m];
+                        const credits = md.interactions * creditsPerMsg;
+                        const avg = md.users > 0 ? (md.interactions / md.users).toFixed(1) : '0';
+                        return `<tr>
+                            <td>${new Date(m+'-01').toLocaleDateString('es-MX',{month:'long',year:'numeric'})}</td>
+                            <td class="mono text-right">${fmtNum(md.interactions)}</td>
+                            <td class="mono text-right">${fmtNum(md.users)}</td>
+                            <td class="mono text-right" style="color:var(--accent-indigo)">${fmtNum(credits,0)}</td>
+                            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(credits*CREDIT_TO_USD,2)}</td>
+                            <td class="mono text-right">${avg}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Per-user cost for this grade -->
+    <div class="insight-card" style="margin-bottom:1.25rem">
+        <div class="insight-card-header">
+            <div class="insight-icon" style="background:rgba(245,158,11,.15)">👤</div>
+            <div class="insight-card-title">Costo Estimado por Usuario — Grado ${grade}°</div>
+        </div>
+        <div class="insight-card-body">
+            ${(() => {
+                const credPerConv = avgCreditsPerConv;
+                const weekly = credPerConv * MAX_CONVS_PER_WEEK;
+                const monthly = weekly * 4.33;
+                const yearly = credPerConv * MAX_CONVS_PER_YEAR;
+                return `Con ${proj.average.toFixed(0)} msgs/conv promedio y ${creditsPerMsg.toFixed(3)} créd/msg:<br>
+                    <strong>Semanal:</strong> ${fmtNum(weekly,1)} créditos ($${fmtNum(weekly*CREDIT_TO_USD,3)}) — 
+                    <strong>Mensual:</strong> ${fmtNum(monthly,0)} créditos ($${fmtNum(monthly*CREDIT_TO_USD,2)}) — 
+                    <strong>Anual:</strong> ${fmtNum(yearly,0)} créditos ($${fmtNum(yearly*CREDIT_TO_USD,2)})
+                    <br><em style="font-size:.75rem;color:var(--text-muted)">Basado en máx ${MAX_CONVS_PER_WEEK} conv/semana, ${WEEKS_PER_YEAR} semanas escolares/año</em>`;
+            })()}
+        </div>
+    </div>
+    `;
+
+    // Render grade-specific charts
+    setTimeout(() => {
+        // Daily chart
+        destroyChart(`grade${grade}Daily`);
+        const dailyValues = days.map(d => daily[d].interactions * creditsPerMsg);
+        const ctxD = document.getElementById(`${canvasId}Daily`);
+        if (ctxD) {
+            STATE.charts[`grade${grade}Daily`] = new Chart(ctxD.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: days.map(d => new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short'})),
+                    datasets: [{
+                        label: 'Créditos/día',
+                        data: dailyValues,
+                        borderColor: '#6366f1',
+                        backgroundColor: '#6366f120',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        borderWidth: 2,
+                    }]
+                },
+                options: CHART_DEFAULTS
+            });
+        }
+
+        // Monthly chart
+        destroyChart(`grade${grade}Monthly`);
+        const mKeys = Object.keys(monthly).sort();
+        const ctxM = document.getElementById(`${canvasId}Monthly`);
+        if (ctxM) {
+            STATE.charts[`grade${grade}Monthly`] = new Chart(ctxM.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: mKeys.map(m => new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})),
+                    datasets: CURRENT_MODEL_MIX.filter(e => STATE.activeModels.has(e.key)).map(entry => {
+                        const item = TRACKABLE_ITEMS.find(t => t.key === entry.key);
+                        return {
+                            label: item.label,
+                            data: mKeys.map(m => monthly[m].interactions * item.creditsPerMsg * entry.weight),
+                            backgroundColor: item.color + 'cc',
+                            borderColor: item.color,
+                            borderWidth: 1,
+                        };
+                    })
+                },
+                options: {
+                    ...CHART_DEFAULTS,
+                    scales: { ...CHART_DEFAULTS.scales, x: { ...CHART_DEFAULTS.scales.x, stacked: true }, y: { ...CHART_DEFAULTS.scales.y, stacked: true } },
+                    plugins: { ...CHART_DEFAULTS.plugins, legend: { ...CHART_DEFAULTS.plugins.legend, display: true } }
+                }
+            });
+        }
+    }, 50);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROJECTIONS TAB
+// ═══════════════════════════════════════════════════════════
+
+function renderProjectionsCurrent() {
+    const creditsPerMsg = weightedCreditsPerMsg();
+    const metricsDiv = document.getElementById('projCurrentMetrics');
+
+    metricsDiv.innerHTML = `
+        <div class="metric-card mc-indigo">
+            <div class="metric-label">Config Actual <span class="info-icon" data-tooltip="Modelo principal: Claude 4.5 Haiku (70%) + Gemini 2.5 Flash (30%) + Orquestación (100%)">i</span></div>
+            <div class="metric-value">${creditsPerMsg.toFixed(3)}</div>
+            <div class="metric-sub">créditos/mensaje</div>
+        </div>
+        <div class="metric-card mc-amber">
+            <div class="metric-label">Precio/Crédito</div>
+            <div class="metric-value">$${CREDIT_TO_USD.toFixed(4)}</div>
+            <div class="metric-sub">USD ($${fmtNum(PLAN_COST_USD)} / ${fmtNum(PLAN_TOTAL_CREDITS)} créd)</div>
+        </div>
+        <div class="metric-card mc-emerald">
+            <div class="metric-label">Config Modelos</div>
+            <div class="metric-value" style="font-size:1rem">${CURRENT_MODEL_MIX.map(e => {
+                const item = TRACKABLE_ITEMS.find(t => t.key === e.key);
+                return item ? `${item.label} (${(e.weight*100).toFixed(0)}%)` : '';
+            }).filter(Boolean).join(' + ')}</div>
+        </div>
+    `;
+
+    const tbody = document.getElementById('projCurrentTableBody');
+    const rows = PROJECTS.map(p => {
+        const proj = STATE.rawData.find(r => r.grade === p.grade);
+        if (!proj) return null;
+
+        const avgMsgs = proj.average || 0;
+        const credPerConv = avgMsgs * creditsPerMsg;
+        const credPerYear = credPerConv * MAX_CONVS_PER_YEAR;
+        const costPerYear = credPerYear * CREDIT_TO_USD;
+
+        return `<tr>
+            <td><strong>${p.grade}°</strong></td>
+            <td class="mono text-right">${fmtNum(credPerConv,1)}</td>
+            <td class="mono text-right">${fmtNum(credPerYear,0)}</td>
+            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(costPerYear,2)}</td>
+        </tr>`;
+    });
+    tbody.innerHTML = rows.filter(Boolean).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Sin datos</td></tr>';
+}
+
+// --- SIMULATOR ---
+let simEntryCounter = 0;
+
+function addSimModelEntry(defaultModel = '', defaultWeight = 0) {
+    const container = document.getElementById('simModelEntries');
+    const id = simEntryCounter++;
+
+    const options = Object.keys(MODEL_PRICING).map(k => {
+        const sel = k === defaultModel ? 'selected' : '';
+        return `<option value="${k}" ${sel}>${k} (${CREDITS_PER_MSG[k].toFixed(3)} créd/msg)</option>`;
+    }).join('');
+
+    const div = document.createElement('div');
+    div.className = 'sim-input-row';
+    div.id = `simEntry-${id}`;
+    div.innerHTML = `
+        <div class="ctrl-group">
+            <label>Modelo</label>
+            <select class="ctrl-select" id="simModel-${id}">${options}</select>
+        </div>
+        <div class="ctrl-group">
+            <label>Peso (%)</label>
+            <input type="number" class="ctrl-input" id="simWeight-${id}" value="${defaultWeight}" min="0" max="100" style="width:80px">
+        </div>
+        <button class="btn btn-secondary" onclick="document.getElementById('simEntry-${id}').remove()" style="padding:.4rem .7rem;">✕</button>
+    `;
+    container.appendChild(div);
+}
+
+function getSimModelMix() {
+    const entries = document.querySelectorAll('[id^="simEntry-"]');
+    const mix = [{ key: 'orchestration', weight: 1.0 }]; // always include orchestration
+
+    entries.forEach(entry => {
+        const id = entry.id.split('-')[1];
+        const model = document.getElementById(`simModel-${id}`).value;
+        const weight = parseFloat(document.getElementById(`simWeight-${id}`).value) / 100;
+        if (weight > 0 && model) {
+            // Map model pricing key to trackable item key if exists, or use generic
+            const trackable = TRACKABLE_ITEMS.find(t => t.key === model);
+            mix.push({
+                key: model,
+                weight,
+                creditsPerMsg: CREDITS_PER_MSG[model] || 0,
+                label: trackable ? trackable.label : model,
+            });
+        }
+    });
+    return mix;
+}
+
+function simWeightedCreditsPerMsg(mix) {
+    let total = 0;
+    mix.forEach(entry => {
+        if (entry.key === 'orchestration') {
+            total += ORCHESTRATION_CREDIT * entry.weight;
+        } else {
+            total += (entry.creditsPerMsg || CREDITS_PER_MSG[entry.key] || 0) * entry.weight;
+        }
+    });
+    return total;
+}
+
+function runSimulation() {
+    if (!STATE.loaded) { alert('Carga datos primero'); return; }
+    const simMix = getSimModelMix();
+    STATE.simModels = simMix;
+    const simCPM = simWeightedCreditsPerMsg(simMix);
+    const currentCPM = weightedCreditsPerMsg();
+
+    const tbody = document.getElementById('simCompTableBody');
+    const rows = PROJECTS.map(p => {
+        const proj = STATE.rawData.find(r => r.grade === p.grade);
+        if (!proj || proj.average === 0) return null;
+
+        const avgMsgs = proj.average;
+        const currentCredPerConv = avgMsgs * currentCPM;
+        const simCredPerConv = avgMsgs * simCPM;
+        const delta = simCredPerConv - currentCredPerConv;
+        const currentYearly = currentCredPerConv * MAX_CONVS_PER_YEAR * CREDIT_TO_USD;
+        const simYearly = simCredPerConv * MAX_CONVS_PER_YEAR * CREDIT_TO_USD;
+        const savingsYearly = currentYearly - simYearly;
+
+        return `<tr>
+            <td><strong>${p.grade}°</strong></td>
+            <td class="mono">${fmtNum(currentCredPerConv,1)}</td>
+            <td class="mono">${fmtNum(simCredPerConv,1)}</td>
+            <td class="mono" style="color:${delta<0?'var(--accent-emerald)':'var(--accent-rose)'}">${delta>0?'+':''}${fmtNum(delta,1)}</td>
+            <td class="mono">$${fmtNum(currentYearly,2)}</td>
+            <td class="mono">$${fmtNum(simYearly,2)}</td>
+            <td class="mono" style="color:${savingsYearly>0?'var(--accent-emerald)':'var(--accent-rose)'}">${savingsYearly>0?'+':''}$${fmtNum(savingsYearly,2)}</td>
+        </tr>`;
+    }).filter(Boolean);
+
+    // Totals row
+    const totals = getTotals();
+    const currentTotal = totals.average * currentCPM * MAX_CONVS_PER_YEAR * CREDIT_TO_USD;
+    const simTotal = totals.average * simCPM * MAX_CONVS_PER_YEAR * CREDIT_TO_USD;
+
+    tbody.innerHTML = rows.join('') + `<tr style="border-top:2px solid var(--border);font-weight:700">
+        <td>Promedio</td>
+        <td class="mono">${fmtNum(totals.average * currentCPM,1)}</td>
+        <td class="mono">${fmtNum(totals.average * simCPM,1)}</td>
+        <td class="mono" style="color:${(simCPM-currentCPM)<0?'var(--accent-emerald)':'var(--accent-rose)'}">
+            ${(simCPM>currentCPM?'+':'')}${fmtNum((totals.average*simCPM)-(totals.average*currentCPM),1)}</td>
+        <td class="mono">$${fmtNum(currentTotal,2)}</td>
+        <td class="mono">$${fmtNum(simTotal,2)}</td>
+        <td class="mono" style="color:${(currentTotal-simTotal)>0?'var(--accent-emerald)':'var(--accent-rose)'}">
+            ${(currentTotal-simTotal)>0?'+':''}$${fmtNum(currentTotal-simTotal,2)}</td>
+    </tr>`;
+
+    document.getElementById('simResults').style.display = '';
+}
+
+// --- CAPACITY PLANNER ---
+function renderCapPerGradeInputs() {
+    const container = document.getElementById('capPerGradeInputs');
+    container.innerHTML = '<div class="sim-input-row">' + PROJECTS.map(p =>
+        `<div class="ctrl-group">
+            <label>Grado ${p.grade}°</label>
+            <input type="number" class="ctrl-input" id="capUsers-${p.grade}" value="10" min="0" style="width:80px">
+        </div>`
+    ).join('') + '</div>';
+}
+
+function runCapacity() {
+    if (!STATE.loaded) { alert('Carga datos primero'); return; }
+
+    const distMode = document.getElementById('capDistMode').value;
+    const convsYear = parseInt(document.getElementById('capConvsYear').value) || MAX_CONVS_PER_YEAR;
+    const currentCPM = weightedCreditsPerMsg();
+    const simMix = STATE.simModels.length > 0 ? STATE.simModels : getSimModelMix();
+    const simCPM = simWeightedCreditsPerMsg(simMix);
+
+    let usersByGrade = {};
+    if (distMode === 'even') {
+        const total = parseInt(document.getElementById('capGlobalUsers').value) || 100;
+        const perGrade = Math.floor(total / PROJECTS.length);
+        const remainder = total % PROJECTS.length;
+        PROJECTS.forEach((p, i) => { usersByGrade[p.grade] = perGrade + (i < remainder ? 1 : 0); });
+    } else {
+        PROJECTS.forEach(p => {
+            usersByGrade[p.grade] = parseInt(document.getElementById(`capUsers-${p.grade}`)?.value) || 0;
+        });
+    }
+
+    let totalCurrentCredits = 0, totalSimCredits = 0, totalUsers = 0;
+    const tbody = document.getElementById('capTableBody');
+
+    const rows = PROJECTS.map(p => {
+        const proj = STATE.rawData.find(r => r.grade === p.grade);
+        const users = usersByGrade[p.grade] || 0;
+        totalUsers += users;
+        const avgMsgs = proj ? proj.average : 10; // default if no data
+        const msgsPerYear = avgMsgs * convsYear * users;
+        const currentCred = msgsPerYear * currentCPM;
+        const simCred = msgsPerYear * simCPM;
+        totalCurrentCredits += currentCred;
+        totalSimCredits += simCred;
+
+        return `<tr>
+            <td><strong>${p.grade}°</strong></td>
+            <td class="mono text-right">${users}</td>
+            <td class="mono text-right">${fmtNum(currentCred,0)}</td>
+            <td class="mono text-right" style="color:var(--accent-amber)">$${fmtNum(currentCred*CREDIT_TO_USD,2)}</td>
+            <td class="mono text-right">${fmtNum(simCred,0)}</td>
+            <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(simCred*CREDIT_TO_USD,2)}</td>
+        </tr>`;
+    });
+
+    rows.push(`<tr style="border-top:2px solid var(--border);font-weight:700">
+        <td>TOTAL</td>
+        <td class="mono text-right">${totalUsers}</td>
+        <td class="mono text-right">${fmtNum(totalCurrentCredits,0)}</td>
+        <td class="mono text-right" style="color:var(--accent-amber)">$${fmtNum(totalCurrentCredits*CREDIT_TO_USD,2)}</td>
+        <td class="mono text-right">${fmtNum(totalSimCredits,0)}</td>
+        <td class="mono text-right" style="color:var(--accent-emerald)">$${fmtNum(totalSimCredits*CREDIT_TO_USD,2)}</td>
+    </tr>`);
+
+    tbody.innerHTML = rows.join('');
+
+    // Summary metrics
+    const savings = totalCurrentCredits - totalSimCredits;
+    const metricsDiv = document.getElementById('capMetrics');
+    metricsDiv.innerHTML = `
+        <div class="metric-card mc-indigo">
+            <div class="metric-label">Créditos/Año (Actual)</div>
+            <div class="metric-value">${fmtNum(totalCurrentCredits,0)}</div>
+            <div class="metric-sub">$${fmtNum(totalCurrentCredits*CREDIT_TO_USD,2)} USD</div>
+        </div>
+        <div class="metric-card mc-emerald">
+            <div class="metric-label">Créditos/Año (Simulado)</div>
+            <div class="metric-value">${fmtNum(totalSimCredits,0)}</div>
+            <div class="metric-sub">$${fmtNum(totalSimCredits*CREDIT_TO_USD,2)} USD</div>
+        </div>
+        <div class="metric-card ${savings>0?'mc-emerald':'mc-rose'}">
+            <div class="metric-label">${savings>0?'Ahorro':'Costo Adicional'}</div>
+            <div class="metric-value">${savings>0?'':'+'} ${fmtNum(Math.abs(savings),0)}</div>
+            <div class="metric-sub">${savings>0?'-':'+'}$${fmtNum(Math.abs(savings*CREDIT_TO_USD),2)} USD/año</div>
+        </div>
+        <div class="metric-card mc-amber">
+            <div class="metric-label">$/Usuario/Año (Actual)</div>
+            <div class="metric-value">$${fmtNum(totalUsers>0?totalCurrentCredits*CREDIT_TO_USD/totalUsers:0,2)}</div>
+        </div>
+    `;
+
+    document.getElementById('capResults').style.display = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════
+
+function fmtNum(n, decimals = null) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    if (decimals !== null) return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+    if (Math.abs(n) >= 10_000) return (n / 1_000).toFixed(1) + 'K';
+    return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+function updateLoadingProgress(text) { document.getElementById('loadingProgress').textContent = text; }
+
+function setStatus(type, text) {
+    const dot = document.getElementById('statusDot');
+    const label = document.getElementById('statusText');
+    dot.className = 'status-dot ' + type;
+    label.textContent = text;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CSV EXPORT
+// ═══════════════════════════════════════════════════════════
+function exportCSV() {
+    if (!STATE.loaded) { alert('Carga datos primero'); return; }
+    const creditsPerMsg = getFilteredCreditsPerMsg();
+
+    let csv = 'Grado,Interacciones,Conversaciones,Promedio Msgs/Conv,Créditos Estimados,Costo USD\n';
+    STATE.rawData.forEach(p => {
+        const credits = p.interactions * creditsPerMsg;
+        csv += `"${p.project}",${p.interactions},${p.users},${p.average.toFixed(2)},${credits.toFixed(0)},${(credits*CREDIT_TO_USD).toFixed(2)}\n`;
+    });
+
+    csv += '\n\nDetalle Mensual\nMes,Interacciones,Conversaciones,Créditos,Costo USD\n';
+    const monthly = aggregateMonthly();
+    Object.entries(monthly).sort().forEach(([m, d]) => {
+        const c = d.interactions * creditsPerMsg;
+        csv += `"${m}",${d.interactions},${d.users},${c.toFixed(0)},${(c*CREDIT_TO_USD).toFixed(2)}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `xolo-credits-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+</script>
+</body>
+</html>
