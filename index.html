@@ -782,27 +782,99 @@ async function loadPricing() {
   }
 }
 
-/* Convert a credit_usage item's raw count to credits.
-   Orchestration items (interaction, audio, no-reply) are already in credits.
-   LLM rows come in as tokens — convert using modelRate / 1000.
-   If no pricing found, returns 0 for LLM rows (avoids misleading numbers). */
-function itemToCredits(item) {
-  const count = item.count || 0;
-  if (item.type === "llm-input" || item.type === "llm-output") {
-    const model = item.model;
-    const rates = STATE.pricing && STATE.pricing[model];
-    if (!rates) return 0; // unknown model, can't convert
-    const rate = item.type === "llm-input" ? rates.input : rates.output;
-    return (count / 1000) * rate;
+/* Normalize item → { category, modelKey }
+   The credit_usage endpoint returns rows with possibly different shapes:
+     - LLM rows: { type: "llm-input"|"llm-output", model: "claude-haiku-4-5-20251001", count: <tokens> }
+     - Orchestration: { type: "interaction"|"audio"|"no-reply", count: <credits>, model: null }
+     - Some rows may use `item` field instead of/alongside `model`.
+   We normalize here so every consumer of the data uses the same shape. */
+function classifyItem(item) {
+  const type = (item.type || "").toLowerCase();
+  const model = item.model || item.item || null;
+
+  if (type === "llm-input" || type === "llm-output") {
+    return { category: type, modelKey: model, isLLM: true };
   }
-  // Orchestration or unknown type — return as-is (already credits)
-  return count;
+  // Orchestration categories — group them all into "chat"/"voice"/"other" for display
+  if (type === "interaction" || type === "chat" || model === "interaction") {
+    return { category: "chat", modelKey: "chat", isLLM: false };
+  }
+  if (type === "audio" || type === "voice" || model === "audio") {
+    return { category: "voice", modelKey: "voice", isLLM: false };
+  }
+  if (type === "no-reply" || model === "no-reply") {
+    return { category: "no-reply", modelKey: "no-reply", isLLM: false };
+  }
+  // Unknown — keep raw info, will log to console
+  return { category: type || "unknown", modelKey: model || "unknown", isLLM: false };
 }
 
-/* Returns the token count for LLM rows, 0 otherwise. */
+/* Fuzzy-match a model name against the pricing config.
+   API returns "claude-haiku-4-5-20251001" and pricing is keyed by the same string.
+   But sometimes versions differ, so we try:
+     1) exact match
+     2) strip trailing -YYYYMMDD date suffix and retry
+     3) prefix match */
+function findModelRates(modelKey) {
+  if (!STATE.pricing || !modelKey) return null;
+  // Exact
+  if (STATE.pricing[modelKey]) return STATE.pricing[modelKey];
+  // Strip trailing date suffix (e.g. -20251001, -2025-10-01)
+  const stripped = modelKey
+    .replace(/-\d{8}$/, "")
+    .replace(/-\d{4}-\d{2}-\d{2}$/, "");
+  if (stripped !== modelKey && STATE.pricing[stripped]) return STATE.pricing[stripped];
+  // Prefix match
+  for (const key of Object.keys(STATE.pricing)) {
+    if (key.startsWith(modelKey) || modelKey.startsWith(key)) return STATE.pricing[key];
+  }
+  return null;
+}
+
+/* Convert a credit_usage item to credits (fractional).
+   - Orchestration rows: count is already credits, return as-is.
+   - LLM rows: count is tokens, convert via pricing table.
+   - If pricing missing for an LLM row, FALLBACK to treating count as credits
+     (better to show something than nothing — and log it for diagnosis). */
+const unknownModelsLog = new Set();
+function itemToCredits(item) {
+  const count = item.count || 0;
+  if (count === 0) return 0;
+
+  const { isLLM, modelKey, category } = classifyItem(item);
+
+  if (!isLLM) return count; // orchestration/chat/voice — already credits
+
+  const rates = findModelRates(modelKey);
+  if (!rates) {
+    // Log once per unknown model so we can see what's missing
+    if (!unknownModelsLog.has(modelKey)) {
+      unknownModelsLog.add(modelKey);
+      console.warn(`[Pricing] No rate for model "${modelKey}" — using raw count as credits (fallback). Item sample:`, item);
+    }
+    return count; // fallback — treat as credits directly
+  }
+  const rate = category === "llm-input" ? rates.input : rates.output;
+  return (count / 1000) * rate;
+}
+
 function itemToTokens(item) {
-  if (item.type === "llm-input" || item.type === "llm-output") return item.count || 0;
-  return 0;
+  const { isLLM } = classifyItem(item);
+  return isLLM ? (item.count || 0) : 0;
+}
+
+/* Extract a YYYY-MM-DD date from an ISO timestamp IN THE USER'S LOCAL TIMEZONE.
+   Previously we used `period.split("T")[0]` which gives UTC date — that caused
+   a 1-day offset for users west of UTC (e.g. Mexico, UTC-6). */
+function periodToLocalDay(period) {
+  if (!period) return null;
+  const d = new Date(period);
+  if (isNaN(d.getTime())) return null;
+  // Format as YYYY-MM-DD in local time
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /* ═══════════════════════════════════════════════
@@ -955,10 +1027,18 @@ async function loadAll() {
       try {
         const items = await fetchPages(x, startTime, endTime);
         STATE.rawByXolo.set(x.grade, items);
+
+        // Diagnostic: log the shape of the first item per xolo
+        if (items.length > 0) {
+          console.log(`[${x.name}] ${items.length} items. Sample:`, items[0]);
+        }
+
+        // Assign colors based on each item's classified modelKey (chat, voice, or LLM model name)
         const totals = new Map();
         items.forEach(it => {
-          if (!it.model) return;
-          totals.set(it.model, (totals.get(it.model) || 0) + itemToCredits(it));
+          const { modelKey } = classifyItem(it);
+          if (!modelKey) return;
+          totals.set(modelKey, (totals.get(modelKey) || 0) + itemToCredits(it));
         });
         [...totals.entries()].sort((a, b) => b[1] - a[1]).forEach(([m]) => getModelColor(m));
       } catch (err) {
@@ -1019,32 +1099,42 @@ function renderXolo(grade) {
   const byDayModel = new Map();
   const byModel = new Map();
 
+  let debugTotalCredits = 0;
+  let debugLLMCredits = 0;
+  let debugOrchCredits = 0;
+
   items.forEach(it => {
-    const day = (it.period || "").split("T")[0];
+    const day = periodToLocalDay(it.period);
     if (!day) return;
     const credits = itemToCredits(it);
     const tokens = itemToTokens(it);
-    const model = it.model || "unknown";
+    const { category, modelKey, isLLM } = classifyItem(it);
 
     byDay.set(day, (byDay.get(day) || 0) + credits);
 
     if (!byDayModel.has(day)) byDayModel.set(day, new Map());
     const dm = byDayModel.get(day);
-    dm.set(model, (dm.get(model) || 0) + credits);
+    dm.set(modelKey, (dm.get(modelKey) || 0) + credits);
 
-    if (!byModel.has(model)) {
-      byModel.set(model, { inputCredits: 0, outputCredits: 0, inputTokens: 0, outputTokens: 0, total: 0 });
+    if (!byModel.has(modelKey)) {
+      byModel.set(modelKey, { inputCredits: 0, outputCredits: 0, inputTokens: 0, outputTokens: 0, total: 0, isLLM });
     }
-    const mdata = byModel.get(model);
+    const mdata = byModel.get(modelKey);
     mdata.total += credits;
-    if (it.type === "llm-input") {
+    if (category === "llm-input") {
       mdata.inputCredits += credits;
       mdata.inputTokens += tokens;
-    } else if (it.type === "llm-output") {
+    } else if (category === "llm-output") {
       mdata.outputCredits += credits;
       mdata.outputTokens += tokens;
     }
+
+    debugTotalCredits += credits;
+    if (isLLM) debugLLMCredits += credits;
+    else debugOrchCredits += credits;
   });
+
+  console.log(`[${xolo.name}] Total: ${debugTotalCredits.toFixed(2)} créd ($${(debugTotalCredits * USD_PER_CREDIT).toFixed(2)}) — LLM: ${debugLLMCredits.toFixed(2)}, Orch: ${debugOrchCredits.toFixed(2)}. Models found: ${[...byModel.keys()].join(", ")}`);
 
   const dayValues = days.map(d => byDay.get(d) || 0);
   const activeDays = dayValues.filter(v => v > 0);
@@ -1064,17 +1154,28 @@ function renderXolo(grade) {
 
   const sortedModels = [...byModel.entries()].sort((a, b) => b[1].total - a[1].total);
 
+  const prettyLabel = m => {
+    if (m === "chat") return "Chat Agent Hosting";
+    if (m === "voice") return "Voice";
+    if (m === "no-reply") return "No-Reply";
+    return m;
+  };
+
   const modelLegendHtml = sortedModels.map(([m]) => `
     <div class="legend-item">
-      <span class="legend-swatch" style="background:${getModelColor(m)};color:${getModelColor(m)}"></span>${m}
+      <span class="legend-swatch" style="background:${getModelColor(m)};color:${getModelColor(m)}"></span>${prettyLabel(m)}
     </div>
   `).join("");
 
   const breakdownHtml = sortedModels.map(([m, data]) => {
     const pct = total > 0 ? (data.total / total) * 100 : 0;
+    const usd = data.total * USD_PER_CREDIT;
     const ratio = data.outputTokens > 0 ? (data.inputTokens / data.outputTokens).toFixed(1) + ":1" : "—";
-    const hasPricing = STATE.pricing && STATE.pricing[m];
-    const modelLabel = hasPricing ? m : `${m} <span style="color:var(--rose);font-size:.75em" title="Modelo sin tarifa en el config público — créditos no calculables">⚠</span>`;
+    const isChat = m === "chat" || m === "voice" || m === "no-reply";
+    const hasPricing = STATE.pricing && (STATE.pricing[m] || findModelRates(m));
+    const modelLabel = isChat
+      ? `<span style="text-transform:capitalize">${m === "chat" ? "Chat Agent Hosting" : m}</span>`
+      : (hasPricing ? m : `${m} <span style="color:var(--gold);font-size:.75em" title="Modelo sin tarifa exacta — se usa valor crudo">≈</span>`);
     return `
       <tr>
         <td>
@@ -1082,11 +1183,10 @@ function renderXolo(grade) {
             <span class="model-dot" style="background:${getModelColor(m)};color:${getModelColor(m)}"></span>${modelLabel}
           </div>
         </td>
-        <td class="right">${fmtNum(data.inputTokens)}</td>
-        <td class="right">${fmtNum(data.outputTokens)}</td>
-        <td class="right"><strong style="color:var(--ink)">${fmtNum(data.total, 2)}</strong></td>
-        <td class="right">${ratio}</td>
-        <td class="right">$${fmtNum(data.total * USD_PER_CREDIT, 2)}</td>
+        <td class="right">${isChat ? "—" : fmtNum(data.inputTokens)}</td>
+        <td class="right">${isChat ? "—" : fmtNum(data.outputTokens)}</td>
+        <td class="right">${isChat ? "—" : ratio}</td>
+        <td class="right"><strong style="color:var(--ink)">$${fmtNum(usd, 2)}</strong></td>
         <td class="bar-cell">
           <div style="color:var(--ink)">${pct.toFixed(1)}%</div>
           <div class="bar-fill"><div class="bar-fill-inner" style="width:${pct}%;background:${getModelColor(m)};color:${getModelColor(m)}"></div></div>
@@ -1094,33 +1194,38 @@ function renderXolo(grade) {
       </tr>`;
   }).join("");
 
+  const totalUSD = total * USD_PER_CREDIT;
+  const avgUSD = avg * USD_PER_CREDIT;
+  const maxUSD = max * USD_PER_CREDIT;
+  const minUSD = min * USD_PER_CREDIT;
+
   content.innerHTML = `
     <section class="stats">
       <div class="stat glass">
         <div class="stat-label"><span class="lbl-icon"></span>Total del Rango</div>
-        <div class="stat-value accent">${fmtNum(total, 2)}</div>
-        <div class="stat-sub">créditos · $${fmtNum(total * USD_PER_CREDIT, 2)} USD</div>
+        <div class="stat-value accent">$${fmtNum(totalUSD, 2)}</div>
+        <div class="stat-sub">${activeDays.length} días con uso en ${days.length} días</div>
       </div>
       <div class="stat glass">
         <div class="stat-label"><span class="lbl-icon" style="background:var(--accent-2);box-shadow:0 0 6px var(--accent-2)"></span>Media Diaria</div>
-        <div class="stat-value">${fmtNum(avg, 2)}</div>
-        <div class="stat-sub">promedio · ${activeDays.length} días con uso</div>
+        <div class="stat-value">$${fmtNum(avgUSD, 2)}</div>
+        <div class="stat-sub">promedio sobre días con uso</div>
       </div>
       <div class="stat glass">
         <div class="stat-label"><span class="lbl-icon" style="background:var(--green);box-shadow:0 0 6px var(--green)"></span>Máximo</div>
-        <div class="stat-value">${fmtNum(max, 2)}</div>
+        <div class="stat-value">$${fmtNum(maxUSD, 2)}</div>
         <div class="stat-sub">${maxDay ? fmtDateShort(maxDay) + " · " + fmtWeekday(maxDay) : "—"}</div>
       </div>
       <div class="stat glass">
         <div class="stat-label"><span class="lbl-icon" style="background:var(--rose);box-shadow:0 0 6px var(--rose)"></span>Mínimo</div>
-        <div class="stat-value">${fmtNum(min, 2)}</div>
+        <div class="stat-value">$${fmtNum(minUSD, 2)}</div>
         <div class="stat-sub">${minDay ? fmtDateShort(minDay) + " · " + fmtWeekday(minDay) : "—"}</div>
       </div>
     </section>
 
     <div class="chart-card glass">
       <div class="chart-head">
-        <div class="chart-title">${xolo.name} — consumo <em>diario</em></div>
+        <div class="chart-title">${xolo.name} — consumo <em>diario</em> (USD)</div>
         <div class="chart-hint">scroll horizontal</div>
       </div>
       <div class="chart-scroll-wrap" id="chartScroll">
@@ -1142,7 +1247,6 @@ function renderXolo(grade) {
               <th>Modelo</th>
               <th class="right">Tokens Input</th>
               <th class="right">Tokens Output</th>
-              <th class="right">Créditos</th>
               <th class="right">Ratio I/O</th>
               <th class="right">USD</th>
               <th>Participación</th>
@@ -1174,10 +1278,11 @@ function renderDailyChart(days, byDayModel, modelList) {
   holder.style.width = minWidth + "px";
 
   const datasets = modelList.map(model => ({
-    label: model,
+    label: (model === "chat" ? "Chat Agent Hosting" : model === "voice" ? "Voice" : model === "no-reply" ? "No-Reply" : model),
     data: days.map(d => {
       const dm = byDayModel.get(d);
-      return dm ? (dm.get(model) || 0) : 0;
+      const credits = dm ? (dm.get(model) || 0) : 0;
+      return credits * USD_PER_CREDIT; // chart in USD
     }),
     backgroundColor: getModelColor(model) + "e6",
     borderColor: getModelColor(model),
@@ -1220,12 +1325,12 @@ function renderDailyChart(days, byDayModel, modelList) {
             },
             label: ctx => {
               if (ctx.raw === 0) return null;
-              return ` ${ctx.dataset.label}: ${fmtNum(ctx.raw, 2)}`;
+              return ` ${ctx.dataset.label}: $${fmtNum(ctx.raw, 2)}`;
             },
             footer: items => {
               const sum = items.reduce((a, it) => a + it.raw, 0);
               if (sum === 0) return "Sin consumo";
-              return `Total: ${fmtNum(sum, 2)} créd · $${fmtNum(sum * USD_PER_CREDIT, 2)}`;
+              return `Total: $${fmtNum(sum, 2)} USD`;
             },
           },
         },
@@ -1259,7 +1364,7 @@ function renderDailyChart(days, byDayModel, modelList) {
           ticks: {
             color: "#6a7390",
             font: { family: "'JetBrains Mono'", size: 10 },
-            callback: v => fmtNum(v),
+            callback: v => "$" + fmtNum(v, 2),
           },
           grid: { color: "rgba(255,255,255,0.05)", drawTicks: false },
           border: { display: false },
