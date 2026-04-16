@@ -1,605 +1,1021 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xolo AI — Credit Analytics Dashboard v3</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-:root{--bg-base:#0a0e1a;--bg-surface:#111827;--bg-card:#1a2236;--bg-card-hover:#1f2b42;--bg-input:#0d1220;--border:#2a3550;--border-active:#6366f1;--text-primary:#e8ecf4;--text-secondary:#8892a8;--text-muted:#5a6478;--accent-indigo:#6366f1;--accent-violet:#8b5cf6;--accent-emerald:#10b981;--accent-amber:#f59e0b;--accent-rose:#f43f5e;--accent-cyan:#06b6d4;--accent-blue:#3b82f6;--accent-orange:#f97316;--radius-sm:6px;--radius-md:10px;--radius-lg:14px;--radius-xl:18px;--shadow-card:0 2px 12px rgba(0,0,0,.35);--font-sans:'DM Sans',system-ui,sans-serif;--font-mono:'JetBrains Mono','SF Mono',monospace;--transition:.2s cubic-bezier(.4,0,.2,1)}
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
-.app-shell{max-width:1440px;margin:0 auto;padding:1.5rem}
-.header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.75rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-xl);margin-bottom:1.25rem}
-.header-left{display:flex;align-items:center;gap:1rem}
-.logo-mark{width:42px;height:42px;background:linear-gradient(135deg,var(--accent-indigo),var(--accent-violet));border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;color:#fff}
-.header h1{font-size:1.35rem;font-weight:700;letter-spacing:-.02em}
-.header h1 span{color:var(--accent-indigo)}
-.header-subtitle{font-size:.8rem;color:var(--text-muted);font-weight:500}
-.header-right{display:flex;align-items:center;gap:.75rem}
-.status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent-emerald);box-shadow:0 0 8px rgba(16,185,129,.5)}
-.status-dot.loading{background:var(--accent-amber);animation:pulse-dot 1.2s infinite}
-.status-dot.error{background:var(--accent-rose)}
-.status-dot.warning{background:var(--accent-amber)}
-@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
-.tab-bar{display:flex;gap:.35rem;padding:.35rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:1.25rem;overflow-x:auto;scrollbar-width:none}
-.tab-bar::-webkit-scrollbar{display:none}
-.tab-btn{padding:.6rem 1.1rem;background:transparent;border:none;color:var(--text-secondary);font-family:var(--font-sans);font-size:.82rem;font-weight:600;border-radius:var(--radius-md);cursor:pointer;white-space:nowrap;transition:var(--transition)}
-.tab-btn:hover{color:var(--text-primary);background:var(--bg-card)}
-.tab-btn.active{background:var(--accent-indigo);color:#fff;box-shadow:0 2px 10px rgba(99,102,241,.35)}
-.tab-content{display:none}.tab-content.active{display:block}
-.controls-bar{display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;padding:1.25rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:1.25rem}
-.ctrl-group{display:flex;flex-direction:column;gap:.35rem}
-.ctrl-group label{font-size:.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
-.ctrl-input,.ctrl-select{background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);padding:.55rem .85rem;border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:.85rem;min-width:140px;transition:var(--transition)}
-.ctrl-input:focus,.ctrl-select:focus{outline:none;border-color:var(--accent-indigo);box-shadow:0 0 0 3px rgba(99,102,241,.15)}
-.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1.25rem;border:none;border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:.85rem;font-weight:600;cursor:pointer;transition:var(--transition);white-space:nowrap}
-.btn-primary{background:var(--accent-indigo);color:#fff}
-.btn-primary:hover{background:#5558e6;transform:translateY(-1px);box-shadow:0 4px 14px rgba(99,102,241,.3)}
-.btn-secondary{background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border)}
-.btn-secondary:hover{border-color:var(--accent-indigo)}
-.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
-.ctrl-spacer{flex:1;min-width:1rem}
-.filter-section{padding:1rem 1.25rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:1.25rem}
-.filter-section-title{font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
-.filter-row{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
-.chip{padding:.3rem .7rem;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;font-family:var(--font-sans);font-size:.75rem;font-weight:500;color:var(--text-secondary);cursor:pointer;transition:var(--transition);user-select:none}
-.chip:hover{border-color:var(--accent-indigo);color:var(--text-primary)}
-.chip.active{background:rgba(99,102,241,.15);border-color:var(--accent-indigo);color:var(--accent-indigo)}
-.chip.excluded{background:rgba(244,63,94,.1);border-color:var(--accent-rose);color:var(--accent-rose);text-decoration:line-through;opacity:.7}
-.filter-info{font-size:.72rem;color:var(--text-muted);margin-top:.5rem;font-style:italic}
-.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.25rem}
-.metric-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.15rem;transition:var(--transition)}
-.metric-card:hover{border-color:var(--border-active);transform:translateY(-2px);box-shadow:var(--shadow-card)}
-.metric-label{font-size:.7rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:.4rem;margin-bottom:.5rem}
-.metric-value{font-size:1.7rem;font-weight:800;letter-spacing:-.03em;font-family:var(--font-mono)}
-.metric-sub{font-size:.75rem;color:var(--text-secondary);margin-top:.25rem}
-.mc-indigo .metric-value{color:var(--accent-indigo)}.mc-emerald .metric-value{color:var(--accent-emerald)}.mc-amber .metric-value{color:var(--accent-amber)}.mc-rose .metric-value{color:var(--accent-rose)}.mc-cyan .metric-value{color:var(--accent-cyan)}.mc-violet .metric-value{color:var(--accent-violet)}.mc-blue .metric-value{color:var(--accent-blue)}.mc-orange .metric-value{color:var(--accent-orange)}
-.info-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--bg-input);border:1px solid var(--border);font-size:.6rem;font-weight:700;color:var(--text-muted);cursor:help;position:relative;flex-shrink:0}
-.info-icon::after{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--bg-base);border:1px solid var(--border);color:var(--text-secondary);padding:.6rem .85rem;border-radius:var(--radius-sm);font-size:.72rem;font-weight:400;line-height:1.45;white-space:normal;width:max-content;max-width:360px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:999;box-shadow:0 8px 30px rgba(0,0,0,.5);text-transform:none;letter-spacing:0;font-family:var(--font-sans)}
-.info-icon:hover::after{opacity:1}
-.chart-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.25rem}
-.chart-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
-.chart-panel-title{font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
-.chart-wrap{position:relative;height:300px}
-.data-table-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1.25rem}
-.data-table-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border)}
-.data-table-title{font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
-.data-table{width:100%;border-collapse:collapse}
-.data-table th,.data-table td{padding:.7rem 1rem;text-align:left;border-bottom:1px solid rgba(42,53,80,.5);font-size:.82rem}
-.data-table th{background:var(--bg-surface);font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-size:.7rem;position:sticky;top:0}
-.data-table tbody tr:hover td{background:var(--bg-card-hover)}
-.data-table .mono{font-family:var(--font-mono);font-weight:600}
-.data-table .text-right{text-align:right}
-.overage-banner{background:linear-gradient(135deg,rgba(244,63,94,.1),rgba(245,158,11,.08));border:2px solid var(--accent-rose);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.25rem}
-.overage-banner.safe{border-color:var(--accent-emerald);background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(6,182,212,.05))}
-.badge{display:inline-block;padding:.15rem .5rem;border-radius:100px;font-size:.7rem;font-weight:600}
-.badge-danger{background:rgba(244,63,94,.15);color:var(--accent-rose)}
-.badge-warning{background:rgba(245,158,11,.15);color:var(--accent-amber)}
-.badge-success{background:rgba(16,185,129,.15);color:var(--accent-emerald)}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-.insights-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1rem;margin-bottom:1.25rem}
-.insight-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem}
-.insight-card-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
-.insight-icon{width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1rem}
-.insight-card-title{font-size:.85rem;font-weight:700}
-.insight-card-body{font-size:.82rem;color:var(--text-secondary);line-height:1.55}
-.insight-card-body strong{color:var(--text-primary)}
-.loading-overlay{position:fixed;inset:0;background:rgba(10,14,26,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px)}
-.loading-overlay.hidden{display:none}
-.loading-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent-indigo);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-label{margin-top:1rem;color:var(--text-secondary);font-size:.9rem}
-.loading-progress{margin-top:.5rem;color:var(--text-muted);font-size:.78rem;font-family:var(--font-mono)}
-.empty-state{text-align:center;padding:3rem 2rem;color:var(--text-muted)}
-.section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
-@media(max-width:900px){.two-col{grid-template-columns:1fr}}
-@media(max-width:768px){.app-shell{padding:.75rem}.header{flex-direction:column;gap:.75rem;text-align:center}.metrics-row{grid-template-columns:repeat(2,1fr)}.insights-grid{grid-template-columns:1fr}.controls-bar{flex-direction:column;align-items:stretch}.ctrl-spacer{display:none}}
-::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xolo · Créditos Diarios</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f2ec;
+  --bg-deep: #efebe2;
+  --ink: #1a1a1a;
+  --ink-2: #4a4a48;
+  --muted: #8a8680;
+  --line: #d9d3c7;
+  --line-soft: #e6e0d2;
+  --card: #fdfbf5;
+  --accent: #c4542a;
+  --accent-deep: #8f3a1a;
+  --green: #5a8a3d;
+  --blue: #3d6a8a;
+  --gold: #b48a2e;
+  --rose: #a63d5a;
+  --violet: #6a4a8a;
+  --teal: #2a7a7a;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Inter Tight', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+body {
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(196,84,42,.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(106,74,138,.05), transparent);
+}
+.grain {
+  position: fixed; inset: 0; pointer-events: none; opacity: .35; z-index: 1;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='.25'/></svg>");
+  mix-blend-mode: multiply;
+}
+.wrap { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem 4rem; position: relative; z-index: 2; }
+
+/* HEADER */
+.masthead {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 2rem;
+  gap: 2rem; flex-wrap: wrap;
+}
+.title-block { flex: 1 1 400px; }
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .5rem;
+  display: flex; align-items: center; gap: .6rem;
+}
+.eyebrow::before {
+  content:""; width:20px; height:1px; background:var(--ink);
+}
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  font-weight: 400;
+  letter-spacing: -.02em;
+  line-height: .95;
+  color: var(--ink);
+}
+h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+.sub {
+  font-size: .92rem;
+  color: var(--ink-2);
+  margin-top: .75rem;
+  max-width: 55ch;
+  line-height: 1.5;
+}
+.meta-block {
+  display: flex; flex-direction: column; align-items: flex-end; gap: .5rem;
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  color: var(--muted);
+}
+.status {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .4rem .8rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: .72rem;
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+.dot.load { background: var(--gold); animation: pulse 1s infinite; }
+.dot.err { background: var(--rose); }
+@keyframes pulse { 50% { opacity: .3; } }
+
+/* CONTROLS */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 2rem;
+  align-items: flex-end;
+}
+.ctrl { display: flex; flex-direction: column; gap: .35rem; }
+.ctrl label {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ctrl input, .ctrl select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: .55rem .8rem;
+  font-family: var(--font-sans);
+  font-size: .88rem;
+  color: var(--ink);
+  border-radius: 6px;
+  min-width: 150px;
+  transition: border-color .15s;
+}
+.ctrl input:focus, .ctrl select:focus { outline: none; border-color: var(--accent); }
+.spacer { flex: 1; min-width: 1rem; }
+.btn {
+  padding: .65rem 1.4rem;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: .88rem;
+  font-weight: 600;
+  letter-spacing: -.005em;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--bg);
+}
+.btn-primary:hover { background: var(--accent); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.btn-ghost:hover { border-color: var(--ink); }
+
+/* TABS */
+.tabs-container {
+  position: sticky; top: 0;
+  background: var(--bg);
+  padding-top: .5rem;
+  z-index: 10;
+  margin: 0 -1.5rem;
+  padding-left: 1.5rem; padding-right: 1.5rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 2rem;
+}
+.tabs {
+  display: flex; gap: .15rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 0;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  padding: .7rem 1.1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-sans);
+  font-size: .88rem;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: -1px;
+}
+.tab:hover { color: var(--ink); }
+.tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+.tab-label { font-size: .68rem; color: var(--muted); font-family: var(--font-mono); letter-spacing: .08em; margin-right: .35rem; }
+.tab.active .tab-label { color: var(--accent); }
+
+/* STATS */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+.stat {
+  padding: 1.5rem 1.75rem;
+  border-right: 1px solid var(--line-soft);
+  position: relative;
+}
+.stat:last-child { border-right: none; }
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .5rem;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  line-height: 1;
+  letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.stat-value.accent { color: var(--accent); }
+.stat-sub {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  color: var(--muted);
+  margin-top: .4rem;
+}
+@media (max-width: 800px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .stat { border-bottom: 1px solid var(--line-soft); }
+  .stat:nth-child(odd) { border-right: 1px solid var(--line-soft); }
+  .stat:nth-child(even) { border-right: none; }
+}
+
+/* CHART CARD */
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+.chart-head {
+  padding: 1.25rem 1.5rem;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--line-soft);
+  flex-wrap: wrap; gap: 1rem;
+}
+.chart-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: -.01em;
+}
+.chart-title em { font-style: italic; color: var(--accent); }
+.chart-hint {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  color: var(--muted);
+  display: flex; align-items: center; gap: .5rem;
+}
+.chart-hint::before { content: "⇄"; font-size: .9rem; }
+
+/* SCROLLABLE CHART — this is the key piece */
+.chart-scroll-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 1.5rem .5rem 1rem 1.5rem;
+  scroll-behavior: smooth;
+}
+.chart-scroll-wrap::-webkit-scrollbar { height: 10px; }
+.chart-scroll-wrap::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+  border-radius: 5px;
+}
+.chart-scroll-wrap::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 5px;
+}
+.chart-scroll-wrap::-webkit-scrollbar-thumb:hover { background: var(--ink-2); }
+.chart-canvas-holder {
+  height: 340px;
+  position: relative;
+  /* width set dynamically based on # of days */
+}
+
+/* MODEL LEGEND */
+.model-legend {
+  display: flex; flex-wrap: wrap; gap: .5rem;
+  padding: 1rem 1.5rem 1.25rem;
+  border-top: 1px solid var(--line-soft);
+}
+.legend-item {
+  display: inline-flex; align-items: center; gap: .45rem;
+  padding: .35rem .7rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: .78rem;
+  font-family: var(--font-mono);
+  color: var(--ink-2);
+}
+.legend-swatch {
+  width: 10px; height: 10px; border-radius: 2px;
+}
+
+/* MODEL BREAKDOWN TABLE */
+.breakdown-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+.breakdown-head {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+.breakdown-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  letter-spacing: -.01em;
+}
+.breakdown-table { width: 100%; border-collapse: collapse; }
+.breakdown-table th {
+  text-align: left;
+  padding: .75rem 1.5rem;
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-deep);
+}
+.breakdown-table td {
+  padding: .8rem 1.5rem;
+  font-size: .88rem;
+  border-bottom: 1px solid var(--line-soft);
+  font-variant-numeric: tabular-nums;
+}
+.breakdown-table tr:last-child td { border-bottom: none; }
+.breakdown-table tr:hover td { background: var(--bg); }
+.breakdown-table .right { text-align: right; font-family: var(--font-mono); }
+.breakdown-table .model-cell {
+  display: flex; align-items: center; gap: .6rem;
+  font-weight: 500;
+}
+.model-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.bar-cell {
+  position: relative;
+  min-width: 120px;
+}
+.bar-fill {
+  height: 5px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: .25rem;
+}
+.bar-fill-inner {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+/* EMPTY & LOADING */
+.empty {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--muted);
+}
+.empty-icon {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-style: italic;
+  color: var(--line);
+  margin-bottom: 1rem;
+}
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: rgba(245,242,236,.92);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+.loading-overlay.hidden { display: none; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-label {
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: .78rem;
+  color: var(--ink-2);
+  letter-spacing: .04em;
+}
+.loading-detail {
+  margin-top: .4rem;
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  color: var(--muted);
+}
+
+@media (max-width: 600px) {
+  .wrap { padding: 1.25rem 1rem 3rem; }
+  .masthead { flex-direction: column; align-items: flex-start; }
+  .meta-block { align-items: flex-start; }
+  .ctrl input, .ctrl select { min-width: 120px; }
+  .stat-value { font-size: 1.6rem; }
+  .chart-canvas-holder { height: 280px; }
+}
+</style>
 </head>
 <body>
-<div class="loading-overlay hidden" id="loadingOverlay"><div class="loading-spinner"></div><div class="loading-label">Cargando datos de analítica...</div><div class="loading-progress" id="loadingProgress"></div></div>
-<div class="app-shell">
-    <header class="header">
-        <div class="header-left"><div class="logo-mark">X</div><div><h1>Xolo <span>Credit Analytics</span></h1><div class="header-subtitle">Dashboard v3 — Proyección de costos y overages</div></div></div>
-        <div class="header-right"><div class="status-dot" id="statusDot"></div><span style="font-size:.78rem;color:var(--text-muted)" id="statusText">Listo</span></div>
-    </header>
-    <nav class="tab-bar" id="tabBar">
-        <button class="tab-btn active" data-tab="dashboard">💰 Costos</button>
-        <button class="tab-btn" data-tab="models">🤖 Modelos</button>
-        <button class="tab-btn" data-tab="messaging">📨 Mensajería</button>
-        <button class="tab-btn" data-tab="grades">🏫 Grados</button>
-        <button class="tab-btn" data-tab="projections">⚡ Proyecciones</button>
-    </nav>
-    <!-- CONTROLS -->
-    <div class="controls-bar">
-        <div class="ctrl-group"><label>Período</label>
-            <select class="ctrl-select" id="periodPreset">
-                <option value="all" selected>Todo el historial</option>
-                <option value="this_month">Este mes</option>
-                <option value="last_month">Mes pasado</option>
-                <option value="last_3">Últimos 3 meses</option>
-                <option value="last_6">Últimos 6 meses</option>
-                <option value="custom">Personalizado</option>
-            </select>
-        </div>
-        <div class="ctrl-group" id="customDateStart" style="display:none"><label>Desde</label><input type="date" class="ctrl-input" id="startDate" value="2025-01-05"></div>
-        <div class="ctrl-group" id="customDateEnd" style="display:none"><label>Hasta</label><input type="date" class="ctrl-input" id="endDate"></div>
-        <div class="ctrl-group"><label>Plan Original (USD)</label><input type="number" class="ctrl-input" id="planBudgetUSD" value="12000" min="0" step="1" style="width:120px"></div>
-        <div class="ctrl-group"><label>Top-ups Agregados (USD)</label><input type="number" class="ctrl-input" id="topupsAdded" value="400" min="0" step="1" style="width:110px"></div>
-        <div class="ctrl-group"><label>$/Crédito API</label><input type="number" class="ctrl-input" id="costPerCredit" value="0.005" min="0" step="0.0001" style="width:100px"></div>
-        <div class="ctrl-group"><label>Fin Ciclo Escolar</label><input type="date" class="ctrl-input" id="schoolYearEnd" value="2026-06-30" style="width:160px"></div>
-        <div class="ctrl-spacer"></div>
-        <button class="btn btn-primary" id="btnFetch" onclick="fetchAllData()">▶ Cargar Datos</button>
-        <button class="btn btn-secondary" onclick="calibrate()" title="Ajusta $/crédito para que el total coincida con lo que reporta VoiceFlow">🔧 Calibrar</button>
-        <button class="btn btn-secondary" onclick="exportCSV()">↓ CSV</button>
-    </div>
-    <!-- MODEL FILTERS -->
-    <div class="filter-section" id="modelFilterSection" style="display:none">
-        <div class="filter-section-title">🔬 Filtros de Modelo LLM <span class="info-icon" data-tooltip="Click para excluir modelos experimentales del cálculo. Los mensajes NO se afectan. Útil para simular cuánto costaría solo con el modelo definitivo.">i</span></div>
-        <div class="filter-row" id="modelChips"></div>
-        <div class="filter-info" id="filterInfo">Todos los modelos activos</div>
-    </div>
-    <!-- DASHBOARD TAB -->
-    <div class="tab-content active" id="tab-dashboard">
-        <div id="overageBanner"></div>
-        <div class="section-label" style="color:var(--accent-rose)">💰 Resumen de Costos (USD)</div>
-        <div class="metrics-row" id="costMetrics"></div>
-        <div class="section-label" style="color:var(--accent-amber)">📈 Proyección al Fin del Ciclo Escolar</div>
-        <div class="metrics-row" id="projMetrics"></div>
-        <div class="two-col">
-            <div class="chart-panel"><div class="chart-panel-title">📊 Costo Mensual (USD)</div><div class="chart-wrap"><canvas id="chartMonthlyCost"></canvas></div></div>
-            <div class="chart-panel"><div class="chart-panel-title">📈 Costo Diario (USD) + Media Móvil</div><div class="chart-wrap"><canvas id="chartDailyCost"></canvas></div></div>
-        </div>
-        <div class="two-col">
-            <div class="chart-panel"><div class="chart-panel-title">🤖 Costo por Modelo LLM</div><div class="chart-wrap"><canvas id="chartByModel"></canvas></div></div>
-            <div class="chart-panel"><div class="chart-panel-title">🏫 Costo por Grado</div><div class="chart-wrap"><canvas id="chartByGrade"></canvas></div></div>
-        </div>
-        <div class="data-table-wrap">
-            <div class="data-table-header"><div class="data-table-title">📅 Detalle Mensual</div></div>
-            <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Mes</th><th class="text-right">Costo Total</th><th class="text-right">Mensajes</th><th class="text-right">Usuarios</th><th class="text-right">$/Msg</th><th>Tendencia</th></tr></thead><tbody id="monthlyTableBody"><tr><td colspan="6" class="empty-state">Haz clic en "Cargar Datos"</td></tr></tbody></table></div>
-        </div>
-        <div class="insights-grid" id="insightsGrid"></div>
-    </div>
-    <!-- MODELS TAB -->
-    <div class="tab-content" id="tab-models"></div>
-    <!-- MESSAGING TAB -->
-    <div class="tab-content" id="tab-messaging"></div>
-    <!-- GRADES TAB -->
-    <div class="tab-content" id="tab-grades"></div>
-    <!-- PROJECTIONS TAB -->
-    <div class="tab-content" id="tab-projections"></div>
+
+<div class="grain"></div>
+
+<div class="loading-overlay hidden" id="loader">
+  <div class="spinner"></div>
+  <div class="loading-label" id="loadLabel">Consultando VoiceFlow…</div>
+  <div class="loading-detail" id="loadDetail"></div>
 </div>
-<script>
-const PROXY_URL="https://voiceflow-analytics.chat-gpt-bc7.workers.dev";
-const COST_PER_CREDIT=0.005; // 1 VF credit = $0.005 USD (calibratable via UI)
-const ORCHESTRATION_COST_PER_MSG=0.01; // $0.01 per user message (VF chat usage charge)
 
-// VoiceFlow LLM pricing table ($/1K tokens) — from official credits chart
-const VF_LLM_PRICING={
-    'claude-haiku-4-5-20251001':{out:0.01,in:0.00,vendor:'Anthropic'},
-    'claude-opus-4-20250514':{out:0.09,in:0.02,vendor:'Anthropic'},
-    'claude-opus-4-5-20251101':{out:0.03,in:0.01,vendor:'Anthropic'},
-    'claude-sonnet-4-20250514':{out:0.02,in:0.00,vendor:'Anthropic'},
-    'claude-sonnet-4-5-20250929':{out:0.02,in:0.00,vendor:'Anthropic'},
-    'claude-sonnet-4-6':{out:0.02,in:0.00,vendor:'Anthropic'},
-    'gemini-2.0-flash':{out:0.00,in:0.00,vendor:'Google'},
-    'gemini-2.5-flash':{out:0.00,in:0.00,vendor:'Google'},
-    'gemini-2.5-pro':{out:0.01,in:0.00,vendor:'Google'},
-    'gpt-4o-2024-08-06':{out:0.0125,in:0.003125,vendor:'OpenAI'},
-    'gpt-4o-2024-11-20':{out:0.0125,in:0.003125,vendor:'OpenAI'},
-    'gpt-4o-mini-2024-07-18':{out:0.00075,in:0.000188,vendor:'OpenAI'},
-    'gpt-4.1-2025-04-14':{out:0.01,in:0.0025,vendor:'OpenAI'},
-    'gpt-4.1-mini-2025-04-14':{out:0.002,in:0.0005,vendor:'OpenAI'},
-    'gpt-4.1-nano-2025-04-14':{out:0.0005,in:0.000125,vendor:'OpenAI'},
-    'gpt-5-2025-08-07':{out:0.0125,in:0.001563,vendor:'OpenAI'},
-    'gpt-5-mini-2025-08-07':{out:0.0025,in:0.000313,vendor:'OpenAI'},
-    'o3-mini-2025-01-31':{out:0.01,in:0.00,vendor:'OpenAI'},
-    'o4-mini-2025-04-16':{out:0.0055,in:0.001375,vendor:'OpenAI'},
-};
-const PROJECTS=[
-    {name:"Xolo 2.0 - 3",grade:3,id:"69648a3142fb1cac823bd719",key:"VF.DM.69648b19774372ae83b64a6f.Gxyvv88zdFVvrfhL"},
-    {name:"Xolo 2.0 - 4",grade:4,id:"696467d942fb1cac823bd1e3",key:"VF.DM.696485c0aeb01b0b69b6a670.GW6aEdVYlOCsmKgi"},
-    {name:"Xolo 2.0 - 5",grade:5,id:"696467a542fb1cac823bd1d7",key:"VF.DM.6964854eb6139e75b888f46d.xdHG0G0Nuyvkinz5"},
-    {name:"Xolo 2.0 - 6",grade:6,id:"696467c442fb1cac823bd1de",key:"VF.DM.6964842142cf44d88c7bc011.A7CKjUYFqJBBzz9I"},
-    {name:"Xolo 2.0 - 7",grade:7,id:"69648b3442fb1cac823bd724",key:"VF.DM.69649147b6139e75b888f470.VxjRlJ1aUQQ0XSmW"},
-    {name:"Xolo 2.0 - 8",grade:8,id:"6964915b42fb1cac823bd760",key:"VF.DM.696492ee3de508144d819027.li2BDyTMZLRxqJMf"},
-    {name:"Xolo 2.0 - 9",grade:9,id:"69648b5842fb1cac823bd729",key:"VF.DM.69648e9ab6139e75b888f46e.NS8oW3YkgnPW7Fqm"},
-    {name:"Xolo 2.0 - 10",grade:10,id:"6964931942fb1cac823bd788",key:"VF.DM.69649443b6139e75b888f471.OztVLPOnLPZbPdTz"},
-    {name:"Xolo 2.0 - 11",grade:11,id:"6964947942fb1cac823bd7a6",key:"VF.DM.696494d7fbbabc183d666b77.bsj9cKB680jegVI2"},
-    {name:"Xolo 2.0 - 12",grade:12,id:"6964948942fb1cac823bd7ab",key:"VF.DM.6964952daeb01b0b69b6a672.axrKSvL4BDs6LUgO"}
-];
-const GRADE_COLORS=['#6366f1','#8b5cf6','#a855f7','#c084fc','#34d399','#10b981','#06b6d4','#3b82f6','#f59e0b','#f97316'];
-const MODEL_COLORS=['#6366f1','#f43f5e','#10b981','#f59e0b','#06b6d4','#8b5cf6','#f97316','#3b82f6','#84cc16','#a855f7','#ec4899','#14b8a6'];
+<div class="wrap">
 
-let STATE={raw:{creditUsage:new Map(),interactions:new Map(),uniqueUsers:new Map()},discoveredModels:[],excludedModels:new Set(),computed:null,activeTab:"dashboard",charts:{},loaded:false,dateRange:{start:null,end:null}};
-
-// ── Helpers ──
-function getPlanBudget(){return parseFloat(document.getElementById('planBudgetUSD').value)||12000}
-function getTopupsAdded(){return parseFloat(document.getElementById('topupsAdded').value)||0}
-function getCostPerCredit(){return parseFloat(document.getElementById('costPerCredit').value)||0.005}
-function getSchoolYearEnd(){return document.getElementById('schoolYearEnd').value}
-function credToUSD(c){return c*getCostPerCredit()}
-function fmtUSD(n){if(n==null||isNaN(n))return'—';if(Math.abs(n)>=1e6)return'$'+(n/1e6).toFixed(2)+'M';if(Math.abs(n)>=1e4)return'$'+(n/1e3).toFixed(1)+'K';return'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function fmtNum(n,d=null){if(n==null||isNaN(n))return'—';if(d!==null)return n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});if(Math.abs(n)>=1e6)return(n/1e6).toFixed(2)+'M';if(Math.abs(n)>=1e4)return(n/1e3).toFixed(1)+'K';return n.toLocaleString('en-US',{maximumFractionDigits:2})}
-function showLoading(){document.getElementById('loadingOverlay').classList.remove('hidden')}
-function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden')}
-function updateLoadingProgress(t){document.getElementById('loadingProgress').textContent=t}
-function setStatus(type,text){document.getElementById('statusDot').className='status-dot '+type;document.getElementById('statusText').textContent=text}
-function destroyChart(key){if(STATE.charts[key]){STATE.charts[key].destroy();delete STATE.charts[key]}}
-
-// ── Init ──
-document.addEventListener('DOMContentLoaded',()=>{
-    document.getElementById('endDate').value=new Date().toISOString().split('T')[0];
-    document.getElementById('startDate').value='2025-01-05';
-    document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
-    document.getElementById('periodPreset').addEventListener('change',handlePeriodChange);
-    // Re-compute when config inputs change
-    ['planBudgetUSD','topupsAdded','costPerCredit','schoolYearEnd'].forEach(id=>{
-        document.getElementById(id).addEventListener('change',()=>{if(STATE.loaded){recalculate();renderAll()}});
-    });
-    hideLoading();
-});
-function calibrate(){
-    if(!STATE.loaded){alert('Carga datos primero');return}
-    const vfTotal=prompt('Ingresa el monto TOTAL de "Credits used" reportado por VoiceFlow (en USD).\nEjemplo: 12349.77');
-    if(!vfTotal)return;
-    const reported=parseFloat(vfTotal);if(isNaN(reported)||reported<=0){alert('Monto inválido');return}
-    // credit_usage includes ALL costs. Total = credits × $/credit
-    const totalCreditUnits=STATE.computed.credits.unfilteredTotal;
-    if(totalCreditUnits===0){alert('No hay datos de credit_usage para calibrar');return}
-    const newRate=reported/totalCreditUnits;
-    document.getElementById('costPerCredit').value=newRate.toFixed(6);
-    recalculate();renderAll();
-    alert(`✅ Calibrado!\n\n$/crédito = ${newRate.toFixed(6)}\n${totalCreditUnits.toLocaleString()} créditos API × $${newRate.toFixed(6)} = $${(totalCreditUnits*newRate).toFixed(2)}\n\nVF reporta: $${reported.toFixed(2)}`);
-}
-function switchTab(id){
-    STATE.activeTab=id;
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active',c.id==='tab-'+id));
-    if(STATE.loaded)renderAll();
-}
-function handlePeriodChange(){
-    const v=document.getElementById('periodPreset').value,today=new Date();
-    document.getElementById('customDateStart').style.display=v==='custom'?'':'none';
-    document.getElementById('customDateEnd').style.display=v==='custom'?'':'none';
-    if(v==='custom')return;
-    let s;
-    switch(v){
-        case'this_month':s=new Date(today.getFullYear(),today.getMonth(),1);break;
-        case'last_month':s=new Date(today.getFullYear(),today.getMonth()-1,1);document.getElementById('endDate').value=new Date(today.getFullYear(),today.getMonth(),0).toISOString().split('T')[0];document.getElementById('startDate').value=s.toISOString().split('T')[0];return;
-        case'last_3':s=new Date(today.getFullYear(),today.getMonth()-3,1);break;
-        case'last_6':s=new Date(today.getFullYear(),today.getMonth()-6,1);break;
-        case'all':s=new Date('2025-01-05');break;
-    }
-    document.getElementById('startDate').value=s.toISOString().split('T')[0];
-    document.getElementById('endDate').value=today.toISOString().split('T')[0];
-}
-
-// ── API Fetch ──
-async function fetchAllPages(project,queryName,startTime,endTime){
-    let all=[],cursor=null,hasMore=true,pages=0;
-    while(hasMore&&pages<50){
-        const body={data:{name:queryName,filter:{projectID:project.id,startTime,endTime,limit:500}}};
-        if(cursor)body.data.filter.cursor=cursor;
-        try{
-            const r=await fetch(`${PROXY_URL}/v2/query/usage`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':project.key},body:JSON.stringify(body)});
-            if(!r.ok)throw new Error(`HTTP ${r.status}`);
-            const d=await r.json();
-            if(d.result&&d.result.items){all=all.concat(d.result.items);cursor=d.result.cursor;hasMore=!!cursor&&d.result.items.length>0}else hasMore=false;
-        }catch(e){throw new Error(`${queryName}@${project.name}: ${e.message}`)}
-        pages++;
-    }
-    return all;
-}
-async function fetchAllData(){
-    const sd=document.getElementById('startDate').value,ed=document.getElementById('endDate').value;
-    if(!sd||!ed){alert('Selecciona fechas');return}
-    const startTime=new Date(sd).toISOString(),endTime=new Date(ed+'T23:59:59').toISOString();
-    STATE.dateRange={start:sd,end:ed};
-    showLoading();setStatus('loading','Cargando...');
-    try{
-        STATE.raw={creditUsage:new Map(),interactions:new Map(),uniqueUsers:new Map()};
-        const errors=[];
-        for(let i=0;i<PROJECTS.length;i++){
-            const p=PROJECTS[i];updateLoadingProgress(`${i+1}/${PROJECTS.length}: ${p.name}`);
-            try{
-                const[cr,int,usr]=await Promise.all([
-                    fetchAllPages(p,'credit_usage',startTime,endTime),
-                    fetchAllPages(p,'interactions',startTime,endTime),
-                    fetchAllPages(p,'unique_users',startTime,endTime)
-                ]);
-                STATE.raw.creditUsage.set(p.id,cr);STATE.raw.interactions.set(p.id,int);STATE.raw.uniqueUsers.set(p.id,usr);
-            }catch(e){console.error(e);errors.push(p.name);STATE.raw.creditUsage.set(p.id,[]);STATE.raw.interactions.set(p.id,[]);STATE.raw.uniqueUsers.set(p.id,[])}
-        }
-        const ms=new Set();STATE.raw.creditUsage.forEach(items=>items.forEach(i=>{if(i.model)ms.add(i.model)}));
-        STATE.discoveredModels=[...ms].sort();STATE.excludedModels=new Set();STATE.loaded=true;
-        buildModelFilterUI();recalculate();renderAll();
-        setStatus(errors.length>0?'warning':'',errors.length>0?`${errors.length} errores`:`OK (${STATE.discoveredModels.length} modelos)`);
-    }catch(e){console.error(e);setStatus('error','Error');alert('Error: '+e.message)}finally{hideLoading()}
-}
-
-// ── Model Filter UI ──
-function buildModelFilterUI(){
-    const sec=document.getElementById('modelFilterSection');sec.style.display=STATE.discoveredModels.length>0?'':'none';
-    const c=document.getElementById('modelChips');
-    c.innerHTML=STATE.discoveredModels.map(m=>{
-        let cr=0;STATE.raw.creditUsage.forEach(items=>items.forEach(i=>{if(i.model===m)cr+=i.count}));
-        return`<div class="chip active" data-model="${m}" onclick="toggleModel('${m}',this)">${m} (${fmtUSD(credToUSD(cr))})</div>`;
-    }).join('');
-    updateFilterInfo();
-}
-function toggleModel(m,el){
-    if(STATE.excludedModels.has(m)){STATE.excludedModels.delete(m);el.className='chip active'}
-    else{if(STATE.excludedModels.size>=STATE.discoveredModels.length-1){alert('Mínimo 1 modelo activo');return}STATE.excludedModels.add(m);el.className='chip excluded'}
-    updateFilterInfo();recalculate();renderAll();
-}
-function updateFilterInfo(){
-    const info=document.getElementById('filterInfo');
-    if(STATE.excludedModels.size===0)info.textContent='Todos los modelos activos — datos completos';
-    else{const active=STATE.discoveredModels.filter(m=>!STATE.excludedModels.has(m));info.textContent=`Activos: ${active.join(', ')} — ${STATE.excludedModels.size} excluido(s)`}
-}
-
-// ── Calculation Engine ──
-// KEY INSIGHT: credit_usage API returns ALL credit consumption (LLM + orchestration/messaging).
-// VoiceFlow charges $0.01 per user message (= 2 credits at $0.005/credit) and this is ALREADY
-// included in credit_usage. So: Total = Σ credit_usage × $0.005. Period. No separate orchestration.
-// interactions count is purely an engagement metric, NOT an additional cost.
-function recalculate(){
-    const C={};
-    // ─── CREDITS (from credit_usage API = total cost source of truth) ───
-    C.credits={total:0,unfilteredTotal:0,byProject:new Map(),byModel:new Map(),byMonth:new Map(),byDay:new Map(),byMonthModel:new Map()};
-    STATE.raw.creditUsage.forEach((items,pid)=>{
-        let pt=0;
-        items.forEach(item=>{
-            C.credits.unfilteredTotal+=item.count;
-            if(STATE.excludedModels.has(item.model))return;
-            const c=item.count;pt+=c;C.credits.total+=c;
-            const model=item.model||'unknown';
-            if(!C.credits.byModel.has(model))C.credits.byModel.set(model,{input:0,output:0,total:0});
-            const md=C.credits.byModel.get(model);md.total+=c;
-            if(item.type==='llm-input')md.input+=c;else if(item.type==='llm-output')md.output+=c;
-            const month=item.period.substring(0,7);C.credits.byMonth.set(month,(C.credits.byMonth.get(month)||0)+c);
-            const day=item.period.split('T')[0];C.credits.byDay.set(day,(C.credits.byDay.get(day)||0)+c);
-            if(!C.credits.byMonthModel.has(month))C.credits.byMonthModel.set(month,new Map());
-            const mm=C.credits.byMonthModel.get(month);mm.set(model,(mm.get(model)||0)+c);
-        });
-        C.credits.byProject.set(pid,pt);
-    });
-
-    // Total cost = credits × $0.005 (credit_usage already includes LLM + messaging charges)
-    C.costTotal=C.credits.total*getCostPerCredit();
-    C.costTotalUnfiltered=C.credits.unfilteredTotal*getCostPerCredit();
-
-    // ─── MESSAGING (informational engagement metrics, NOT additional cost) ───
-    C.msg={total:0,users:0,byProject:new Map(),usersByProject:new Map(),byMonth:new Map(),byDay:new Map(),usersByMonth:new Map()};
-    STATE.raw.interactions.forEach((items,pid)=>{let t=0;items.forEach(i=>{t+=i.count;C.msg.total+=i.count;const m=i.period.substring(0,7);C.msg.byMonth.set(m,(C.msg.byMonth.get(m)||0)+i.count);const d=i.period.split('T')[0];C.msg.byDay.set(d,(C.msg.byDay.get(d)||0)+i.count)});C.msg.byProject.set(pid,t)});
-    STATE.raw.uniqueUsers.forEach((items,pid)=>{let t=0;items.forEach(i=>{t+=i.count;C.msg.users+=i.count;const m=i.period.substring(0,7);C.msg.usersByMonth.set(m,(C.msg.usersByMonth.get(m)||0)+i.count)});C.msg.usersByProject.set(pid,t)});
-
-    // Informational breakdown
-    C.estimatedMsgCost=C.msg.total*ORCHESTRATION_COST_PER_MSG;
-    C.estimatedLLMCost=Math.max(0,C.costTotal-C.estimatedMsgCost);
-    C.costPerMsg=C.msg.total>0?C.costTotal/C.msg.total:0;
-    C.costPerUser=C.msg.users>0?C.costTotal/C.msg.users:0;
-
-    // BUDGET & TOP-UPS
-    const plan=getPlanBudget();
-    const topups=getTopupsAdded();
-    C.plan=plan;
-    C.topupsAdded=topups;
-    C.totalBudget=plan+topups;
-    C.topupsSpent=Math.max(0,C.costTotal-plan);
-    C.topupsRemaining=Math.max(0,topups-C.topupsSpent);
-    C.budgetPct=plan>0?(C.costTotal/plan*100):0;
-
-    // YESTERDAY'S CONSUMPTION — the key projection metric
-    const sortedDays=[...C.credits.byDay.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
-    const lastDay=sortedDays.length>0?sortedDays[sortedDays.length-1]:null;
-    const prevDay=sortedDays.length>1?sortedDays[sortedDays.length-2]:null;
-    C.yesterdayDate=lastDay?lastDay[0]:'N/A';
-    C.yesterdayCredits=lastDay?lastDay[1]:0;
-    C.yesterdayCost=C.yesterdayCredits*getCostPerCredit();
-    C.yesterdayMsgs=C.msg.byDay.get(C.yesterdayDate)||0;
-    C.prevDayDate=prevDay?prevDay[0]:'N/A';
-    C.prevDayCost=prevDay?prevDay[1]*getCostPerCredit():0;
-
-    // PROJECTION — based on yesterday's rate (new config)
-    const schoolEnd=new Date(getSchoolYearEnd());
-    C.daysToSchoolEnd=Math.max(0,(schoolEnd-new Date())/(864e5));
-    C.projectedFutureCost=C.yesterdayCost*C.daysToSchoolEnd;
-    C.additionalTopupsNeeded=Math.max(0,C.projectedFutureCost-C.topupsRemaining);
-
-    // Also 7-day avg for comparison
-    const last7=sortedDays.slice(-7);
-    C.dailyRate7d=last7.length>0?(last7.reduce((s,[,v])=>s+v,0)/last7.length)*getCostPerCredit():0;
-    C.projFuture7d=C.dailyRate7d*C.daysToSchoolEnd;
-    C.addTopups7d=Math.max(0,C.projFuture7d-C.topupsRemaining);
-
-    // Diagnostic
-    console.log(`📊 Total: ${fmtUSD(C.costTotal)} | Plan: ${fmtUSD(plan)} | Top-ups: ${fmtUSD(topups)} (gastado: ${fmtUSD(C.topupsSpent)}, queda: ${fmtUSD(C.topupsRemaining)})`);
-    console.log(`📅 Ayer (${C.yesterdayDate}): ${fmtUSD(C.yesterdayCost)} (${C.yesterdayMsgs} msgs)`);
-    console.log(`⚡ ${Math.round(C.daysToSchoolEnd)} días × ${fmtUSD(C.yesterdayCost)}/día = ${fmtUSD(C.projectedFutureCost)} → top-ups extra: ${fmtUSD(C.additionalTopupsNeeded)}`);
-
-    STATE.computed=C;
-}
-
-// ── Render ──
-function renderAll(){if(!STATE.computed)return;const t=STATE.activeTab;if(t==='dashboard')renderDashboard();else if(t==='models')renderModelsTab();else if(t==='messaging')renderMessagingTab();else if(t==='grades')renderGradesTab();else if(t==='projections')renderProjectionsTab()}
-
-const CHART_OPTS={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8892a8',font:{size:11},boxWidth:12,padding:12}},tooltip:{backgroundColor:'#1a2236',borderColor:'#2a3550',borderWidth:1,titleColor:'#e8ecf4',bodyColor:'#8892a8',padding:10,cornerRadius:8}},scales:{x:{ticks:{color:'#5a6478',font:{size:10}},grid:{color:'rgba(42,53,80,.3)'}},y:{ticks:{color:'#5a6478',font:{size:10}},grid:{color:'rgba(42,53,80,.3)'}}}};
-
-function renderDashboard(){
-    const C=STATE.computed,filterNote=STATE.excludedModels.size>0?` (${STATE.excludedModels.size} excluido(s))`:'';
-    // TOP-UPS BANNER
-    const isOver=C.costTotal>C.plan;
-    document.getElementById('overageBanner').innerHTML=isOver?`
-    <div class="overage-banner">
-        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem"><span style="font-size:1.5rem">🚨</span><div><div style="font-size:1.1rem;font-weight:800;color:var(--accent-rose)">PLAN EXCEDIDO — Top-ups activos</div><div style="font-size:.82rem;color:var(--text-secondary)">Plan de ${fmtUSD(C.plan)} agotado. Top-ups: ${fmtUSD(C.topupsAdded)} agregados, ${fmtUSD(C.topupsSpent)} gastados, ${fmtUSD(C.topupsRemaining)} disponibles.</div></div></div>
-        <div class="metrics-row" style="margin-bottom:0">
-            <div class="metric-card mc-amber"><div class="metric-label">📅 Consumo Ayer (${C.yesterdayDate})</div><div class="metric-value">${fmtUSD(C.yesterdayCost)}</div><div class="metric-sub">${C.yesterdayMsgs} mensajes${C.prevDayCost>0?` (día anterior: ${fmtUSD(C.prevDayCost)})`:''}</div></div>
-            <div class="metric-card mc-rose"><div class="metric-label">🔮 Top-ups Adicionales Necesarios</div><div class="metric-value" style="font-size:2rem">${fmtUSD(C.additionalTopupsNeeded)}</div><div class="metric-sub">basado en ayer × ${Math.round(C.daysToSchoolEnd)} días restantes</div></div>
-            <div class="metric-card mc-orange"><div class="metric-label">💸 Costo Futuro Estimado</div><div class="metric-value">${fmtUSD(C.projectedFutureCost)}</div><div class="metric-sub">de hoy al ${getSchoolYearEnd()}</div></div>
-            <div class="metric-card mc-violet"><div class="metric-label">Balance Top-ups</div><div class="metric-value">${fmtUSD(C.topupsRemaining)}</div><div class="metric-sub">de ${fmtUSD(C.topupsAdded)} agregados</div></div>
-        </div>
-    </div>`:`<div class="overage-banner safe"><div style="display:flex;align-items:center;gap:.75rem"><span style="font-size:1.3rem">✅</span><div><strong>Dentro del plan</strong> — ${fmtUSD(C.costTotal)} de ${fmtUSD(C.plan)} (${C.budgetPct.toFixed(1)}%)</div></div></div>`;
-    // Cost metrics
-    document.getElementById('costMetrics').innerHTML=`
-        <div class="metric-card mc-indigo"><div class="metric-label">Total Gastado${filterNote}</div><div class="metric-value">${fmtUSD(C.costTotal)}</div><div class="metric-sub">${C.budgetPct.toFixed(1)}% del plan de ${fmtUSD(C.plan)}</div></div>
-        <div class="metric-card mc-cyan"><div class="metric-label">Top-ups Gastados</div><div class="metric-value">${fmtUSD(C.topupsSpent)}</div><div class="metric-sub">de ${fmtUSD(C.topupsAdded)} agregados</div></div>
-        <div class="metric-card mc-orange"><div class="metric-label">$/Mensaje</div><div class="metric-value">${fmtUSD(C.costPerMsg)}</div><div class="metric-sub">promedio histórico</div></div>
-        <div class="metric-card mc-amber"><div class="metric-label">Consumo Ayer</div><div class="metric-value">${fmtUSD(C.yesterdayCost)}</div><div class="metric-sub">${C.yesterdayDate} — ${C.yesterdayMsgs} msgs</div></div>`;
-    // Projection metrics
-    document.getElementById('projMetrics').innerHTML=`
-        <div class="metric-card mc-amber"><div class="metric-label">Días al Fin Ciclo</div><div class="metric-value">${Math.round(C.daysToSchoolEnd)}</div><div class="metric-sub">hasta ${getSchoolYearEnd()}</div></div>
-        <div class="metric-card mc-rose"><div class="metric-label">🔮 Top-ups Extra (Ayer)</div><div class="metric-value" style="font-size:1.5rem">${fmtUSD(C.additionalTopupsNeeded)}</div><div class="metric-sub">${fmtUSD(C.yesterdayCost)}/día × ${Math.round(C.daysToSchoolEnd)} días − ${fmtUSD(C.topupsRemaining)} disponible</div></div>
-        <div class="metric-card mc-orange"><div class="metric-label">Ref: Top-ups Extra (7d avg)</div><div class="metric-value">${fmtUSD(C.addTopups7d)}</div><div class="metric-sub">${fmtUSD(C.dailyRate7d)}/día promedio 7 días</div></div>
-        <div class="metric-card mc-violet"><div class="metric-label">Costo Total al Fin</div><div class="metric-value">${fmtUSD(C.costTotal+C.projectedFutureCost)}</div><div class="metric-sub">gastado + futuro estimado</div></div>`;
-    renderMonthlyTable();renderCharts();renderInsights();
-}
-
-function renderMonthlyTable(){
-    const C=STATE.computed;const allMonths=new Set([...C.credits.byMonth.keys(),...C.msg.byMonth.keys()]);const months=[...allMonths].sort();
-    const tbody=document.getElementById('monthlyTableBody');
-    if(!months.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr>';return}
-    let prev=null;
-    tbody.innerHTML=months.map(m=>{
-        const total=credToUSD(C.credits.byMonth.get(m)||0),msgs=C.msg.byMonth.get(m)||0;
-        const cpm=msgs>0?total/msgs:0;
-        let trend='—';if(prev!==null){const d=total-prev,pct=prev>0?(d/prev*100).toFixed(1):0;trend=d>0?`<span style="color:var(--accent-rose)">↑ +${pct}%</span>`:d<0?`<span style="color:var(--accent-emerald)">↓ ${pct}%</span>`:`<span style="color:var(--text-muted)">=</span>`}
-        prev=total;
-        const users=C.msg.usersByMonth.get(m)||0;
-        return`<tr><td>${new Date(m+'-01').toLocaleDateString('es-MX',{year:'numeric',month:'long'})}</td><td class="mono text-right" style="color:var(--accent-indigo)">${fmtUSD(total)}</td><td class="mono text-right">${fmtNum(msgs)}</td><td class="mono text-right">${fmtNum(users)}</td><td class="mono text-right" style="color:var(--accent-orange)">${fmtUSD(cpm)}</td><td>${trend}</td></tr>`;
-    }).join('');
-}
-
-function renderCharts(){
-    if(typeof Chart==='undefined'){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js';s.onload=()=>renderCharts();document.head.appendChild(s);return}
-    const C=STATE.computed;
-    // Monthly cost bar
-    destroyChart('monthlyCost');const months=[...C.credits.byMonth.keys()].sort();
-    if(months.length){
-        const ctx=document.getElementById('chartMonthlyCost').getContext('2d');
-        STATE.charts.monthlyCost=new Chart(ctx,{type:'bar',data:{labels:months.map(m=>new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})),datasets:[
-            {label:'Costo Total',data:months.map(m=>credToUSD(C.credits.byMonth.get(m)||0)),backgroundColor:'#6366f1cc'},
-        ]},options:{...CHART_OPTS,plugins:{...CHART_OPTS.plugins,legend:{display:false}}}});
-    }
-    // Daily cost line
-    destroyChart('dailyCost');const days=[...C.credits.byDay.keys()].sort();
-    if(days.length){
-        const vals=days.map(d=>credToUSD(C.credits.byDay.get(d)||0));
-        const ma7=vals.map((_,i)=>{const sl=vals.slice(Math.max(0,i-6),i+1);return sl.reduce((a,b)=>a+b,0)/sl.length});
-        const ctx=document.getElementById('chartDailyCost').getContext('2d');
-        STATE.charts.dailyCost=new Chart(ctx,{type:'line',data:{labels:days.map(d=>new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short'})),datasets:[
-            {label:'$/día',data:vals,borderColor:'#6366f180',backgroundColor:'#6366f115',fill:true,tension:.3,pointRadius:1,borderWidth:1.5},
-            {label:'Media 7d',data:ma7,borderColor:'#f59e0b',backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:.4,borderDash:[5,3]}
-        ]},options:CHART_OPTS});
-    }
-    // By model doughnut
-    destroyChart('byModel');const ml=[],md=[],mc=[];let mi=0;
-    C.credits.byModel.forEach((d,m)=>{ml.push(m);md.push(credToUSD(d.total));mc.push(MODEL_COLORS[mi++%MODEL_COLORS.length])});
-    if(ml.length){const ctx=document.getElementById('chartByModel').getContext('2d');STATE.charts.byModel=new Chart(ctx,{type:'doughnut',data:{labels:ml,datasets:[{data:md,backgroundColor:mc,borderColor:'#1a2236',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#8892a8',font:{size:11},padding:8,boxWidth:12}},tooltip:{...CHART_OPTS.plugins.tooltip,callbacks:{label:c=>{const s=md.reduce((a,b)=>a+b,0);return`${c.label}: ${fmtUSD(c.raw)} (${s>0?(c.raw/s*100).toFixed(1):0}%)`}}}}}});}
-    // By grade bar
-    destroyChart('byGrade');const gl=[],gd=[];
-    PROJECTS.forEach((p,i)=>{gl.push(`${p.grade}°`);const cr=C.credits.byProject.get(p.id)||0;const ms=C.msg.byProject.get(p.id)||0;gd.push(credToUSD(cr))});
-    const ctx=document.getElementById('chartByGrade').getContext('2d');STATE.charts.byGrade=new Chart(ctx,{type:'bar',data:{labels:gl,datasets:[{label:'Costo USD',data:gd,backgroundColor:GRADE_COLORS.map(c=>c+'cc'),borderColor:GRADE_COLORS,borderWidth:1}]},options:{...CHART_OPTS,plugins:{...CHART_OPTS.plugins,legend:{display:false}}}});
-}
-
-function renderInsights(){
-    const C=STATE.computed;let topModel='',topModelCost=0;
-    C.credits.byModel.forEach((d,m)=>{const c=credToUSD(d.total);if(c>topModelCost){topModelCost=c;topModel=m}});
-    const topModelData=C.credits.byModel.get(topModel);const ioRatio=topModelData&&topModelData.output>0?(topModelData.input/topModelData.output).toFixed(1):'N/A';
-    let topGrade=null,topGradeCost=0;PROJECTS.forEach(p=>{const c=credToUSD(C.credits.byProject.get(p.id)||0);if(c>topGradeCost){topGradeCost=c;topGrade=p}});
-    document.getElementById('insightsGrid').innerHTML=`
-    <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(99,102,241,.15)">🤖</div><div class="insight-card-title">Modelo Más Caro</div></div><div class="insight-card-body"><strong>${topModel}</strong> ha costado <strong>${fmtUSD(topModelCost)}</strong> (${C.costTotal>0?(topModelCost/C.costTotal*100).toFixed(1):0}% del LLM). Ratio I/O: <strong>${ioRatio}:1</strong>${parseFloat(ioRatio)>10?'<br>Ratio alto = mucho contexto enviado vs poco generado. Oportunidad de optimización.':''}</div></div>
-    <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(244,63,94,.15)">💸</div><div class="insight-card-title">Costo Extra Necesario</div></div><div class="insight-card-body">Basado en el consumo de ayer (<strong>${fmtUSD(C.yesterdayCost)}</strong>), los próximos <strong>${Math.round(C.daysToSchoolEnd)} días</strong> costarán ~<strong>${fmtUSD(C.projectedFutureCost)}</strong>.<br>Top-ups restantes: <strong>${fmtUSD(C.topupsRemaining)}</strong>. <strong style="color:var(--accent-rose)">Necesitas ${fmtUSD(C.additionalTopupsNeeded)} más en top-ups.</strong>}</div></div>
-    <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(16,185,129,.15)">🏫</div><div class="insight-card-title">Grado Más Caro</div></div><div class="insight-card-body"><strong>${topGrade?topGrade.name:'N/A'}</strong>: <strong>${fmtUSD(topGradeCost)}</strong> total. ${topGrade?fmtNum(C.msg.byProject.get(topGrade.id)||0):0} mensajes, ${topGrade?fmtNum(C.msg.usersByProject.get(topGrade.id)||0):0} usuarios.</div></div>
-    <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(6,182,212,.15)">📊</div><div class="insight-card-title">Eficiencia</div></div><div class="insight-card-body">Costo promedio por mensaje: <strong>${fmtUSD(C.costPerMsg)}</strong>. Costo promedio por usuario: <strong>${fmtUSD(C.costPerUser)}</strong>.<br>Msgs por usuario: <strong>${C.msg.users>0?(C.msg.total/C.msg.users).toFixed(1):'—'}</strong>.</div></div>`;
-}
-
-// ── MODELS TAB ──
-function renderModelsTab(){
-    const C=STATE.computed,con=document.getElementById('tab-models');let rows='';
-    C.credits.byModel.forEach((d,m)=>{
-        const cost=credToUSD(d.total),pct=C.costTotal>0?(cost/C.costTotal*100).toFixed(1):0;
-        const ratio=d.output>0?(d.input/d.output).toFixed(1):'N/A';
-        const ex=STATE.excludedModels.has(m);
-        rows+=`<tr${ex?' style="opacity:.5;text-decoration:line-through"':''}><td><strong>${m}</strong>${ex?' <span class="badge badge-danger">excluido</span>':''}</td><td class="mono text-right">${fmtUSD(credToUSD(d.input))}</td><td class="mono text-right">${fmtUSD(credToUSD(d.output))}</td><td class="mono text-right" style="color:var(--accent-indigo)">${fmtUSD(cost)}</td><td class="mono text-right">${pct}%</td><td class="mono text-right">${ratio}</td></tr>`;
-    });
-    // Monthly stacked data
-    const months=[...C.credits.byMonth.keys()].sort();const activeModels=STATE.discoveredModels.filter(m=>!STATE.excludedModels.has(m));
-    // Build VF pricing reference table
-    let pricingRows='';Object.entries(VF_LLM_PRICING).forEach(([m,p])=>{pricingRows+=`<tr><td>${p.vendor}</td><td><strong>${m}</strong></td><td class="mono text-right">${fmtUSD(p.out)}</td><td class="mono text-right">${fmtUSD(p.in)}</td></tr>`});
-
-    con.innerHTML=`<div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">🤖 Costo Real por Modelo (de credit_usage API)</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Modelo</th><th class="text-right">Costo Input</th><th class="text-right">Costo Output</th><th class="text-right">Total USD</th><th class="text-right">% LLM</th><th class="text-right">Ratio I/O</th></tr></thead><tbody>${rows}</tbody></table></div></div>
-    <div class="chart-panel"><div class="chart-panel-title">📊 Costo Mensual por Modelo (Stacked)</div><div class="chart-wrap"><canvas id="chartModelMonthly"></canvas></div></div>
-    <div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">📋 Tabla de Precios VoiceFlow — Referencia ($/1K tokens)</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Vendor</th><th>Modelo</th><th class="text-right">$/1K Output</th><th class="text-right">$/1K Input</th></tr></thead><tbody>${pricingRows}<tr style="border-top:2px solid var(--border)"><td colspan="4" style="color:var(--accent-amber);font-size:.75rem">+ $${ORCHESTRATION_COST_PER_MSG} por cada mensaje del usuario (orquestación)</td></tr></tbody></table></div></div>`;
-    setTimeout(()=>{if(typeof Chart==='undefined')return;destroyChart('modelMonthly');
-        const datasets=activeModels.map((m,i)=>({label:m,data:months.map(mo=>{const mm=C.credits.byMonthModel.get(mo);return mm?credToUSD(mm.get(m)||0):0}),backgroundColor:MODEL_COLORS[i%MODEL_COLORS.length]+'cc',borderColor:MODEL_COLORS[i%MODEL_COLORS.length],borderWidth:1}));
-        const ctx=document.getElementById('chartModelMonthly');if(ctx)STATE.charts.modelMonthly=new Chart(ctx.getContext('2d'),{type:'bar',data:{labels:months.map(m=>new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})),datasets},options:{...CHART_OPTS,plugins:{...CHART_OPTS.plugins,legend:{display:false}}}});
-    },50);
-}
-
-// ── MESSAGING TAB ──
-function renderMessagingTab(){
-    const C=STATE.computed,con=document.getElementById('tab-messaging');
-    let rows2='';PROJECTS.forEach(p=>{const m=C.msg.byProject.get(p.id)||0,u=C.msg.usersByProject.get(p.id)||0;rows2+=`<tr><td><strong>${p.grade}°</strong></td><td class="mono text-right">${fmtNum(m)}</td><td class="mono text-right" style="color:var(--accent-amber)">${fmtUSD(m*ORCHESTRATION_COST_PER_MSG)}</td><td class="mono text-right">${fmtNum(u)}</td><td class="mono text-right">${u>0?(m/u).toFixed(1):'—'}</td></tr>`});
-    con.innerHTML=`<div class="section-label" style="color:var(--accent-cyan)">Dominio B — Mensajería (cada mensaje del usuario = $0.01)</div>
-    <div class="metrics-row"><div class="metric-card mc-cyan"><div class="metric-label">Total Mensajes</div><div class="metric-value">${fmtNum(C.msg.total)}</div><div class="metric-sub">costo orquestación: ${fmtUSD(C.msg.total*ORCHESTRATION_COST_PER_MSG)}</div></div><div class="metric-card mc-violet"><div class="metric-label">Usuarios Únicos</div><div class="metric-value">${fmtNum(C.msg.users)}</div></div><div class="metric-card mc-blue"><div class="metric-label">Msgs/Usuario</div><div class="metric-value">${C.msg.users>0?(C.msg.total/C.msg.users).toFixed(1):'—'}</div></div><div class="metric-card mc-amber"><div class="metric-label">Costo Orquestación/Msg</div><div class="metric-value">${fmtUSD(ORCHESTRATION_COST_PER_MSG)}</div><div class="metric-sub">fijo por VoiceFlow</div></div></div>
-    <div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">📨 Mensajes y Costo de Orquestación por Grado</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Grado</th><th class="text-right">Mensajes</th><th class="text-right">Costo Orq.</th><th class="text-right">Usuarios</th><th class="text-right">Msgs/Usuario</th></tr></thead><tbody>${rows2}</tbody></table></div></div>`;
-}
-
-// ── GRADES TAB ──
-function renderGradesTab(){
-    const C=STATE.computed,con=document.getElementById('tab-grades');
-    let rows='';PROJECTS.forEach(p=>{
-        const cr=C.credits.byProject.get(p.id)||0,ms=C.msg.byProject.get(p.id)||0,us=C.msg.usersByProject.get(p.id)||0;
-        const total=credToUSD(cr);
-        const cpm=ms>0?total/ms:0;
-        rows+=`<tr><td><strong>${p.grade}°</strong></td><td class="mono text-right" style="color:var(--accent-indigo)">${fmtUSD(total)}</td><td class="mono text-right">${fmtNum(ms)}</td><td class="mono text-right">${fmtNum(us)}</td><td class="mono text-right" style="color:var(--accent-orange)">${fmtUSD(cpm)}</td></tr>`;
-    });
-    con.innerHTML=`<div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">🏫 Costo por Grado (de credit_usage)</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Grado</th><th class="text-right">Costo Total</th><th class="text-right">Mensajes</th><th class="text-right">Usuarios</th><th class="text-right">$/Msg</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
-}
-
-// ── PROJECTIONS TAB ──
-function renderProjectionsTab(){
-    const C=STATE.computed,con=document.getElementById('tab-projections');
-    const filterNote=STATE.excludedModels.size>0?`<br><span class="badge badge-warning">${STATE.excludedModels.size} modelo(s) filtrado(s) — proyección refleja solo modelos activos</span>`:'';
-    con.innerHTML=`
-    <div class="insight-card" style="margin-bottom:1.25rem;border-color:var(--accent-rose)">
-        <div class="insight-card-header"><div class="insight-icon" style="background:rgba(244,63,94,.15)">🚨</div><div class="insight-card-title">Resumen de Overage</div></div>
-        <div class="insight-card-body">
-            <strong>Presupuesto:</strong> ${fmtUSD(C.plan)}<br>
-            <strong>Gastado hasta hoy:</strong> ${fmtUSD(C.costTotal)} (${C.budgetPct.toFixed(1)}%)<br>
-            <strong>Overage actual:</strong> ${fmtUSD(C.overage)}<br><br>
-            <strong>Burn rate diario (7d):</strong> ${fmtUSD(C.dailyRate7d)}<br>
-            <strong>Burn rate mensual:</strong> ${fmtUSD(C.dailyRate7d*30)}<br>
-            <strong>Días restantes:</strong> ${Math.round(C.daysToSchoolEnd)} (hasta ${getSchoolYearEnd()})<br><br>
-            <strong style="color:var(--accent-rose)">Costo adicional estimado: ${fmtUSD(C.projectedFutureCost)}</strong><br>
-            <strong style="color:var(--accent-rose)">Costo total al fin del ciclo: ${fmtUSD(C.costTotal+C.projectedFutureCost)}</strong><br>
-            <strong style="color:var(--accent-rose)">Overage total: ${fmtUSD(C.additionalTopupsNeeded)}</strong>
-            ${filterNote}
-        </div>
+  <header class="masthead">
+    <div class="title-block">
+      <div class="eyebrow">Gnius · analytics</div>
+      <h1>Créditos <em>diarios</em><br>por Xolo.</h1>
+      <div class="sub">Histórico de consumo LLM día por día para cada grado. Consulta el endpoint <code style="font-family:var(--font-mono);font-size:.85em">credit_usage</code> de VoiceFlow y agrupa por fecha y modelo.</div>
     </div>
-    <div class="section-label" style="color:var(--accent-amber)">¿Cómo reducir costos?</div>
-    <div class="insights-grid">
-        <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(99,102,241,.15)">🔬</div><div class="insight-card-title">Filtrar Modelos Caros</div></div><div class="insight-card-body">Usa los chips de filtro (arriba) para excluir modelos experimentales y ver cuánto costaría con solo el modelo definitivo. La proyección se recalcula en tiempo real.${STATE.excludedModels.size>0?`<br><br><strong>Con filtros actuales:</strong> costo LLM = ${fmtUSD(C.costTotal)} (sin filtro sería ${fmtUSD(credToUSD(C.credits.unfilteredTotal))})`:''}</div></div>
-        <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(16,185,129,.15)">💡</div><div class="insight-card-title">Optimizar Prompts</div></div><div class="insight-card-body">Reducir el tamaño del system prompt y las inyecciones de KB reduce créditos de input (que suelen ser 5-40x más que output). Revisa el ratio I/O en la pestaña de Modelos.</div></div>
-        <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(245,158,11,.15)">🔄</div><div class="insight-card-title">Cambiar a Modelo Más Barato</div></div><div class="insight-card-body">VoiceFlow cobra créditos proporcionales al costo del modelo. GPT-4o mini (0.08x) vs GPT-4o (2.5x) = ~30x diferencia en créditos por las mismas tokens. Claude Haiku vs Sonnet tiene una diferencia similar.</div></div>
-    </div>`;
+    <div class="meta-block">
+      <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Listo</span></div>
+      <div id="dateRangeLabel">—</div>
+    </div>
+  </header>
+
+  <section class="controls">
+    <div class="ctrl">
+      <label>Desde</label>
+      <input type="date" id="startDate">
+    </div>
+    <div class="ctrl">
+      <label>Hasta</label>
+      <input type="date" id="endDate">
+    </div>
+    <div class="ctrl">
+      <label>Rango rápido</label>
+      <select id="quickRange">
+        <option value="30">Últimos 30 días</option>
+        <option value="60">Últimos 60 días</option>
+        <option value="90" selected>Últimos 90 días (feb–abr)</option>
+        <option value="180">Últimos 6 meses</option>
+        <option value="365">Último año</option>
+        <option value="custom">Personalizado</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" id="btnLoad" onclick="loadAll()">Cargar datos</button>
+    <button class="btn btn-ghost" onclick="exportCSV()">Exportar CSV</button>
+  </section>
+
+  <div class="tabs-container">
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <div id="content">
+    <div class="empty">
+      <div class="empty-icon">—</div>
+      <div>Selecciona un rango y presiona <strong>Cargar datos</strong></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   CONFIG
+   ═══════════════════════════════════════════════ */
+const PROXY_URL = "https://voiceflow-analytics.chat-gpt-bc7.workers.dev";
+
+const XOLOS = [
+  { grade: 3,  name: "Xolo 2.0 - 3",  id: "69648a3142fb1cac823bd719", key: "VF.DM.69648b19774372ae83b64a6f.Gxyvv88zdFVvrfhL" },
+  { grade: 4,  name: "Xolo 2.0 - 4",  id: "696467d942fb1cac823bd1e3", key: "VF.DM.696485c0aeb01b0b69b6a670.GW6aEdVYlOCsmKgi" },
+  { grade: 5,  name: "Xolo 2.0 - 5",  id: "696467a542fb1cac823bd1d7", key: "VF.DM.6964854eb6139e75b888f46d.xdHG0G0Nuyvkinz5" },
+  { grade: 6,  name: "Xolo 2.0 - 6",  id: "696467c442fb1cac823bd1de", key: "VF.DM.6964842142cf44d88c7bc011.A7CKjUYFqJBBzz9I" },
+  { grade: 7,  name: "Xolo 2.0 - 7",  id: "69648b3442fb1cac823bd724", key: "VF.DM.69649147b6139e75b888f470.VxjRlJ1aUQQ0XSmW" },
+  { grade: 8,  name: "Xolo 2.0 - 8",  id: "6964915b42fb1cac823bd760", key: "VF.DM.696492ee3de508144d819027.li2BDyTMZLRxqJMf" },
+  { grade: 9,  name: "Xolo 2.0 - 9",  id: "69648b5842fb1cac823bd729", key: "VF.DM.69648e9ab6139e75b888f46e.NS8oW3YkgnPW7Fqm" },
+  { grade: 10, name: "Xolo 2.0 - 10", id: "6964931942fb1cac823bd788", key: "VF.DM.69649443b6139e75b888f471.OztVLPOnLPZbPdTz" },
+  { grade: 11, name: "Xolo 2.0 - 11", id: "6964947942fb1cac823bd7a6", key: "VF.DM.696494d7fbbabc183d666b77.bsj9cKB680jegVI2" },
+  { grade: 12, name: "Xolo 2.0 - 12", id: "6964948942fb1cac823bd7ab", key: "VF.DM.6964952daeb01b0b69b6a672.axrKSvL4BDs6LUgO" }
+];
+
+const USD_PER_CREDIT = 0.005;
+
+// Palette — distinct, sorted by typical prevalence. Will be assigned in order of discovery.
+const MODEL_PALETTE = [
+  "#5a8a3d",  // sage green
+  "#c4542a",  // terracotta (accent)
+  "#3d6a8a",  // deep blue
+  "#b48a2e",  // gold
+  "#6a4a8a",  // violet
+  "#a63d5a",  // rose
+  "#2a7a7a",  // teal
+  "#8f5a3a",  // bronze
+  "#4a6a3d",  // olive
+  "#8a3d6a",  // magenta
+  "#3a8a6a",  // emerald
+  "#6a3d3a",  // oxblood
+];
+
+/* ═══════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════ */
+const STATE = {
+  rawByXolo: new Map(), // grade -> [items]
+  modelColors: new Map(), // modelName -> color
+  dateRange: { start: null, end: null },
+  activeTab: null,
+  chart: null,
+};
+
+/* ═══════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+
+function fmtNum(n, d = 0) {
+  if (n === null || n === undefined || isNaN(n)) return "—";
+  if (d === 0) return Math.round(n).toLocaleString("en-US");
+  return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function fmtDateShort(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+}
+function fmtWeekday(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("es-MX", { weekday: "short" });
+}
+function setStatus(type, text) {
+  $("statusDot").className = "dot" + (type ? " " + type : "");
+  $("statusText").textContent = text;
+}
+function showLoader(lbl, detail) {
+  $("loadLabel").textContent = lbl || "Cargando…";
+  $("loadDetail").textContent = detail || "";
+  $("loader").classList.remove("hidden");
+}
+function hideLoader() { $("loader").classList.add("hidden"); }
+
+function enumerateDays(startStr, endStr) {
+  const out = [];
+  const s = new Date(startStr + "T00:00:00");
+  const e = new Date(endStr + "T00:00:00");
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+    out.push(d.toISOString().split("T")[0]);
+  }
+  return out;
 }
 
-// ── CSV Export ──
-function exportCSV(){
-    if(!STATE.loaded){alert('Carga datos primero');return}
-    const C=STATE.computed;let csv='Grado,Costo Total,Mensajes,Usuarios,$/Msg\n';
-    PROJECTS.forEach(p=>{const cr=C.credits.byProject.get(p.id)||0,ms=C.msg.byProject.get(p.id)||0,us=C.msg.usersByProject.get(p.id)||0;const t=credToUSD(cr);csv+=`"${p.name}",${t.toFixed(2)},${ms},${us},${ms>0?(t/ms).toFixed(4):0}\n`});
-    csv+='\nModelos LLM\nModelo,Costo Input,Costo Output,Total USD,% LLM\n';
-    C.credits.byModel.forEach((d,m)=>{csv+=`"${m}",${credToUSD(d.input).toFixed(2)},${credToUSD(d.output).toFixed(2)},${credToUSD(d.total).toFixed(2)},${C.costTotal>0?(credToUSD(d.total)/C.costTotal*100).toFixed(1):0}\n`});
-    csv+=`\nResumen\nPlan,${C.plan}\nTop-ups,${C.topupsAdded}\nGastado,${C.costTotal.toFixed(2)}\nTop-ups gastados,${C.topupsSpent.toFixed(2)}\nConsumo ayer,${C.yesterdayCost.toFixed(2)}\nTop-ups adicionales,${C.additionalTopupsNeeded.toFixed(2)}\n`;
-    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=`xolo-costs-${new Date().toISOString().split('T')[0]}.csv`;link.click();
+function getModelColor(model) {
+  if (!STATE.modelColors.has(model)) {
+    const idx = STATE.modelColors.size % MODEL_PALETTE.length;
+    STATE.modelColors.set(model, MODEL_PALETTE[idx]);
+  }
+  return STATE.modelColors.get(model);
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════ */
+document.addEventListener("DOMContentLoaded", () => {
+  // Default dates: last 90 days
+  const today = new Date();
+  const ninety = new Date(today);
+  ninety.setDate(today.getDate() - 90);
+  $("endDate").value = today.toISOString().split("T")[0];
+  $("startDate").value = ninety.toISOString().split("T")[0];
+
+  $("quickRange").addEventListener("change", e => {
+    const v = e.target.value;
+    if (v === "custom") return;
+    const days = parseInt(v);
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+    $("startDate").value = start.toISOString().split("T")[0];
+    $("endDate").value = end.toISOString().split("T")[0];
+  });
+
+  // Build tabs
+  const tabs = $("tabs");
+  tabs.innerHTML = XOLOS.map(x => `
+    <button class="tab" data-grade="${x.grade}" onclick="switchTab(${x.grade})">
+      <span class="tab-label">${x.grade}°</span>${x.name.replace("Xolo 2.0 - ", "Xolo ")}
+    </button>
+  `).join("");
+});
+
+/* ═══════════════════════════════════════════════
+   FETCH
+   ═══════════════════════════════════════════════ */
+async function fetchPages(xolo, startTime, endTime) {
+  const all = [];
+  let cursor = null;
+  let page = 0;
+  while (page < 50) {
+    const body = {
+      data: {
+        name: "credit_usage",
+        filter: { projectID: xolo.id, startTime, endTime, limit: 500 }
+      }
+    };
+    if (cursor) body.data.filter.cursor = cursor;
+
+    const res = await fetch(`${PROXY_URL}/v2/query/usage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": xolo.key },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status}: ${txt.slice(0, 150)}`);
+    }
+    const data = await res.json();
+    const items = data?.result?.items || [];
+    all.push(...items);
+    cursor = data?.result?.cursor;
+    if (!cursor || items.length === 0) break;
+    page++;
+  }
+  return all;
+}
+
+async function loadAll() {
+  const startDate = $("startDate").value;
+  const endDate = $("endDate").value;
+  if (!startDate || !endDate) { alert("Selecciona fechas"); return; }
+  if (startDate > endDate) { alert("La fecha 'Desde' debe ser anterior a 'Hasta'"); return; }
+
+  STATE.dateRange = { start: startDate, end: endDate };
+  const startTime = new Date(startDate + "T00:00:00").toISOString();
+  const endTime = new Date(endDate + "T23:59:59").toISOString();
+
+  showLoader("Consultando VoiceFlow", "Preparando requests…");
+  setStatus("load", "Cargando…");
+  $("btnLoad").disabled = true;
+
+  STATE.rawByXolo.clear();
+  STATE.modelColors.clear();
+
+  const errors = [];
+
+  try {
+    for (let i = 0; i < XOLOS.length; i++) {
+      const x = XOLOS[i];
+      showLoader("Consultando VoiceFlow", `${i + 1}/${XOLOS.length} — Grado ${x.grade}°`);
+      try {
+        const items = await fetchPages(x, startTime, endTime);
+        STATE.rawByXolo.set(x.grade, items);
+        // Pre-assign colors in order of total consumption for this xolo
+        const totals = new Map();
+        items.forEach(it => {
+          if (!it.model) return;
+          totals.set(it.model, (totals.get(it.model) || 0) + (it.count || 0));
+        });
+        [...totals.entries()].sort((a, b) => b[1] - a[1]).forEach(([m]) => getModelColor(m));
+      } catch (err) {
+        console.error(`Error ${x.name}:`, err);
+        errors.push(`${x.grade}°`);
+        STATE.rawByXolo.set(x.grade, []);
+      }
+    }
+
+    // Update meta
+    $("dateRangeLabel").textContent = `${fmtDateShort(startDate)} → ${fmtDateShort(endDate)}`;
+
+    // Switch to first tab
+    switchTab(STATE.activeTab || XOLOS[0].grade);
+
+    setStatus(errors.length ? "err" : "", errors.length ? `Errores en: ${errors.join(", ")}` : "Datos cargados");
+  } catch (err) {
+    console.error(err);
+    setStatus("err", "Error");
+    alert("Error al cargar: " + err.message);
+  } finally {
+    hideLoader();
+    $("btnLoad").disabled = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TABS
+   ═══════════════════════════════════════════════ */
+function switchTab(grade) {
+  STATE.activeTab = grade;
+  document.querySelectorAll(".tab").forEach(t => {
+    t.classList.toggle("active", parseInt(t.dataset.grade) === grade);
+  });
+  renderXolo(grade);
+}
+
+/* ═══════════════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════════════ */
+function renderXolo(grade) {
+  const xolo = XOLOS.find(x => x.grade === grade);
+  const items = STATE.rawByXolo.get(grade);
+  const content = $("content");
+
+  if (!items) {
+    content.innerHTML = `<div class="empty"><div class="empty-icon">—</div>Sin datos. Presiona <strong>Cargar datos</strong>.</div>`;
+    return;
+  }
+
+  if (items.length === 0) {
+    content.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">∅</div>
+        <div><strong>${xolo.name}</strong> no reportó consumo de créditos en este rango.</div>
+      </div>`;
+    return;
+  }
+
+  // ── Aggregate by day and by day×model ──
+  const days = enumerateDays(STATE.dateRange.start, STATE.dateRange.end);
+  const byDay = new Map();           // day -> total
+  const byDayModel = new Map();      // day -> (model -> count)
+  const byModel = new Map();         // model -> { input, output, total }
+
+  items.forEach(it => {
+    const day = (it.period || "").split("T")[0];
+    if (!day) return;
+    const count = it.count || 0;
+    const model = it.model || "unknown";
+
+    byDay.set(day, (byDay.get(day) || 0) + count);
+
+    if (!byDayModel.has(day)) byDayModel.set(day, new Map());
+    const dm = byDayModel.get(day);
+    dm.set(model, (dm.get(model) || 0) + count);
+
+    if (!byModel.has(model)) byModel.set(model, { input: 0, output: 0, total: 0 });
+    const mdata = byModel.get(model);
+    mdata.total += count;
+    if (it.type === "llm-input") mdata.input += count;
+    else if (it.type === "llm-output") mdata.output += count;
+  });
+
+  // ── Stats ──
+  const dayValues = days.map(d => byDay.get(d) || 0);
+  const activeDays = dayValues.filter(v => v > 0);
+  const total = dayValues.reduce((a, b) => a + b, 0);
+  const avg = activeDays.length ? total / activeDays.length : 0;
+  const max = activeDays.length ? Math.max(...activeDays) : 0;
+  const min = activeDays.length ? Math.min(...activeDays) : 0;
+
+  // Find the max day and min day (actual dates)
+  let maxDay = null, minDay = null;
+  days.forEach(d => {
+    const v = byDay.get(d) || 0;
+    if (v > 0) {
+      if (maxDay === null || v > (byDay.get(maxDay) || 0)) maxDay = d;
+      if (minDay === null || v < (byDay.get(minDay) || Infinity)) minDay = d;
+    }
+  });
+
+  // Sort models by total desc for display
+  const sortedModels = [...byModel.entries()].sort((a, b) => b[1].total - a[1].total);
+
+  // ── Build model legend html ──
+  const modelLegendHtml = sortedModels.map(([m]) => `
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:${getModelColor(m)}"></span>${m}
+    </div>
+  `).join("");
+
+  // ── Build breakdown table html ──
+  const breakdownHtml = sortedModels.map(([m, data]) => {
+    const pct = total > 0 ? (data.total / total) * 100 : 0;
+    const ratio = data.output > 0 ? (data.input / data.output).toFixed(1) + ":1" : "—";
+    return `
+      <tr>
+        <td>
+          <div class="model-cell">
+            <span class="model-dot" style="background:${getModelColor(m)}"></span>${m}
+          </div>
+        </td>
+        <td class="right">${fmtNum(data.input)}</td>
+        <td class="right">${fmtNum(data.output)}</td>
+        <td class="right"><strong>${fmtNum(data.total)}</strong></td>
+        <td class="right">${ratio}</td>
+        <td class="right">$${fmtNum(data.total * USD_PER_CREDIT, 2)}</td>
+        <td class="bar-cell">
+          <div>${pct.toFixed(1)}%</div>
+          <div class="bar-fill"><div class="bar-fill-inner" style="width:${pct}%;background:${getModelColor(m)}"></div></div>
+        </td>
+      </tr>`;
+  }).join("");
+
+  // ── Assemble UI ──
+  content.innerHTML = `
+    <section class="stats">
+      <div class="stat">
+        <div class="stat-label">Total del Rango</div>
+        <div class="stat-value accent">${fmtNum(total)}</div>
+        <div class="stat-sub">créditos · $${fmtNum(total * USD_PER_CREDIT, 2)} USD</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Media Diaria</div>
+        <div class="stat-value">${fmtNum(avg)}</div>
+        <div class="stat-sub">promedio · ${activeDays.length} días con uso</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Máximo</div>
+        <div class="stat-value">${fmtNum(max)}</div>
+        <div class="stat-sub">${maxDay ? fmtDateShort(maxDay) + " · " + fmtWeekday(maxDay) : "—"}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Mínimo</div>
+        <div class="stat-value">${fmtNum(min)}</div>
+        <div class="stat-sub">${minDay ? fmtDateShort(minDay) + " · " + fmtWeekday(minDay) : "—"}</div>
+      </div>
+    </section>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <div class="chart-title">${xolo.name} — consumo <em>diario</em></div>
+        <div class="chart-hint">scroll horizontal</div>
+      </div>
+      <div class="chart-scroll-wrap" id="chartScroll">
+        <div class="chart-canvas-holder" id="chartHolder">
+          <canvas id="dailyChart"></canvas>
+        </div>
+      </div>
+      <div class="model-legend">${modelLegendHtml}</div>
+    </div>
+
+    <div class="breakdown-card">
+      <div class="breakdown-head">
+        <div class="breakdown-title">Desglose por <em>modelo</em></div>
+      </div>
+      <table class="breakdown-table">
+        <thead>
+          <tr>
+            <th>Modelo</th>
+            <th class="right">Input</th>
+            <th class="right">Output</th>
+            <th class="right">Total</th>
+            <th class="right">Ratio I/O</th>
+            <th class="right">USD</th>
+            <th>Participación</th>
+          </tr>
+        </thead>
+        <tbody>${breakdownHtml}</tbody>
+      </table>
+    </div>
+  `;
+
+  // ── Render chart ──
+  renderDailyChart(days, byDayModel, sortedModels.map(([m]) => m));
+}
+
+function renderDailyChart(days, byDayModel, modelList) {
+  // Dynamic width: minimum ~24px per bar so labels fit
+  const holder = $("chartHolder");
+  const scroll = $("chartScroll");
+  const perDay = 28;
+  const minWidth = Math.max(days.length * perDay, scroll.clientWidth - 40);
+  holder.style.width = minWidth + "px";
+
+  // Build datasets — one per model (stacked)
+  const datasets = modelList.map(model => ({
+    label: model,
+    data: days.map(d => {
+      const dm = byDayModel.get(d);
+      return dm ? (dm.get(model) || 0) : 0;
+    }),
+    backgroundColor: getModelColor(model),
+    borderColor: getModelColor(model),
+    borderWidth: 0,
+    borderRadius: 2,
+    barPercentage: 0.85,
+    categoryPercentage: 0.9,
+  }));
+
+  // Destroy previous chart
+  if (STATE.chart) { STATE.chart.destroy(); STATE.chart = null; }
+
+  const ctx = $("dailyChart").getContext("2d");
+  STATE.chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: days,
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#1a1a1a",
+          titleColor: "#f5f2ec",
+          bodyColor: "#d9d3c7",
+          borderColor: "#4a4a48",
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 6,
+          titleFont: { family: "'Inter Tight'", size: 12, weight: 600 },
+          bodyFont: { family: "'JetBrains Mono'", size: 11 },
+          callbacks: {
+            title: items => {
+              const d = items[0].label;
+              return fmtWeekday(d) + ", " + fmtDateShort(d);
+            },
+            label: ctx => {
+              if (ctx.raw === 0) return null;
+              return `${ctx.dataset.label}: ${fmtNum(ctx.raw)} créd`;
+            },
+            footer: items => {
+              const sum = items.reduce((a, it) => a + it.raw, 0);
+              if (sum === 0) return "Sin consumo";
+              return `Total: ${fmtNum(sum)} créd  ·  $${fmtNum(sum * USD_PER_CREDIT, 2)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: true,
+          ticks: {
+            color: "#8a8680",
+            font: { family: "'JetBrains Mono'", size: 10 },
+            maxRotation: 0,
+            autoSkip: false,
+            callback: function(val, i) {
+              const d = this.getLabelForValue(val);
+              const dd = new Date(d + "T00:00:00");
+              // Show Mon and the 1st of each month; otherwise just day number
+              if (dd.getDate() === 1) {
+                return dd.toLocaleDateString("es-MX", { month: "short" }).toUpperCase();
+              }
+              // Every 2-3 days to avoid clutter, or only on Mondays for long ranges
+              if (days.length > 60) {
+                return dd.getDay() === 1 ? String(dd.getDate()) : "";
+              }
+              return String(dd.getDate());
+            },
+          },
+          grid: { display: false },
+          border: { color: "#d9d3c7" },
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: {
+            color: "#8a8680",
+            font: { family: "'JetBrains Mono'", size: 10 },
+            callback: v => fmtNum(v),
+          },
+          grid: { color: "rgba(138,134,128,.15)", drawTicks: false },
+          border: { display: false },
+        },
+      },
+    },
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   CSV EXPORT
+   ═══════════════════════════════════════════════ */
+function exportCSV() {
+  if (STATE.rawByXolo.size === 0) { alert("Carga datos primero"); return; }
+  const days = enumerateDays(STATE.dateRange.start, STATE.dateRange.end);
+
+  let csv = "Fecha,Día semana,Xolo,Modelo,Tipo,Créditos\n";
+  STATE.rawByXolo.forEach((items, grade) => {
+    items.forEach(it => {
+      const day = (it.period || "").split("T")[0];
+      if (!day) return;
+      const weekday = fmtWeekday(day);
+      csv += `${day},${weekday},${grade}°,${it.model || ""},${it.type || ""},${it.count || 0}\n`;
+    });
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `xolo-creditos-diarios-${STATE.dateRange.start}-a-${STATE.dateRange.end}.csv`;
+  link.click();
 }
 </script>
 </body>
