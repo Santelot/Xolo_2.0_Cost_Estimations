@@ -128,9 +128,8 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         </div>
         <div class="ctrl-group" id="customDateStart" style="display:none"><label>Desde</label><input type="date" class="ctrl-input" id="startDate" value="2025-01-05"></div>
         <div class="ctrl-group" id="customDateEnd" style="display:none"><label>Hasta</label><input type="date" class="ctrl-input" id="endDate"></div>
-        <div class="ctrl-group"><label>Presupuesto Plan (USD)</label><input type="number" class="ctrl-input" id="planBudgetUSD" value="12000" min="0" step="1" style="width:120px"></div>
+        <div class="ctrl-group"><label>Presupuesto Plan (USD)</label><input type="number" class="ctrl-input" id="planBudgetUSD" value="12400" min="0" step="1" style="width:120px"></div>
         <div class="ctrl-group"><label>$/Unidad Crédito API <span class="info-icon" data-tooltip="El factor de conversión entre la unidad 'count' de la API y dólares. Default 0.005 (sistema antiguo). Si VF cambió, usa Calibrar para ajustar.">i</span></label><input type="number" class="ctrl-input" id="costPerCredit" value="0.005" min="0" step="0.0001" style="width:110px"></div>
-        <div class="ctrl-group"><label>$/Msg Orquestación</label><input type="number" class="ctrl-input" id="orchCostPerMsg" value="0.01" min="0" step="0.001" style="width:100px"></div>
         <div class="ctrl-group"><label>Fin Ciclo Escolar</label><input type="date" class="ctrl-input" id="schoolYearEnd" value="2026-06-30" style="width:160px"></div>
         <div class="ctrl-spacer"></div>
         <button class="btn btn-primary" id="btnFetch" onclick="fetchAllData()">▶ Cargar Datos</button>
@@ -160,7 +159,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         </div>
         <div class="data-table-wrap">
             <div class="data-table-header"><div class="data-table-title">📅 Detalle Mensual</div></div>
-            <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Mes</th><th class="text-right">Costo LLM</th><th class="text-right">Mensajería</th><th class="text-right">Total USD</th><th class="text-right">Mensajes</th><th class="text-right">$/Msg</th><th>Tendencia</th></tr></thead><tbody id="monthlyTableBody"><tr><td colspan="7" class="empty-state">Haz clic en "Cargar Datos"</td></tr></tbody></table></div>
+            <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Mes</th><th class="text-right">Costo Total</th><th class="text-right">Mensajes</th><th class="text-right">Usuarios</th><th class="text-right">$/Msg</th><th>Tendencia</th></tr></thead><tbody id="monthlyTableBody"><tr><td colspan="6" class="empty-state">Haz clic en "Cargar Datos"</td></tr></tbody></table></div>
         </div>
         <div class="insights-grid" id="insightsGrid"></div>
     </div>
@@ -175,6 +174,8 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 </div>
 <script>
 const PROXY_URL="https://voiceflow-analytics.chat-gpt-bc7.workers.dev";
+const COST_PER_CREDIT=0.005; // 1 VF credit = $0.005 USD (calibratable via UI)
+const ORCHESTRATION_COST_PER_MSG=0.01; // $0.01 per user message (VF chat usage charge)
 
 // VoiceFlow LLM pricing table ($/1K tokens) — from official credits chart
 const VF_LLM_PRICING={
@@ -216,11 +217,11 @@ const MODEL_COLORS=['#6366f1','#f43f5e','#10b981','#f59e0b','#06b6d4','#8b5cf6',
 let STATE={raw:{creditUsage:new Map(),interactions:new Map(),uniqueUsers:new Map()},discoveredModels:[],excludedModels:new Set(),computed:null,activeTab:"dashboard",charts:{},loaded:false,dateRange:{start:null,end:null}};
 
 // ── Helpers ──
-function getPlanBudget(){return parseFloat(document.getElementById('planBudgetUSD').value)||12000}
+function getPlanBudget(){return parseFloat(document.getElementById('planBudgetUSD').value)||12400}
 function getCostPerCredit(){return parseFloat(document.getElementById('costPerCredit').value)||0.005}
-function getOrchCostPerMsg(){return parseFloat(document.getElementById('orchCostPerMsg').value)||0.01}
 function getSchoolYearEnd(){return document.getElementById('schoolYearEnd').value}
-function credToUSD(c){return c*getCostPerCredit()}function fmtUSD(n){if(n==null||isNaN(n))return'—';if(Math.abs(n)>=1e6)return'$'+(n/1e6).toFixed(2)+'M';if(Math.abs(n)>=1e4)return'$'+(n/1e3).toFixed(1)+'K';return'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function credToUSD(c){return c*getCostPerCredit()}
+function fmtUSD(n){if(n==null||isNaN(n))return'—';if(Math.abs(n)>=1e6)return'$'+(n/1e6).toFixed(2)+'M';if(Math.abs(n)>=1e4)return'$'+(n/1e3).toFixed(1)+'K';return'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fmtNum(n,d=null){if(n==null||isNaN(n))return'—';if(d!==null)return n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});if(Math.abs(n)>=1e6)return(n/1e6).toFixed(2)+'M';if(Math.abs(n)>=1e4)return(n/1e3).toFixed(1)+'K';return n.toLocaleString('en-US',{maximumFractionDigits:2})}
 function showLoading(){document.getElementById('loadingOverlay').classList.remove('hidden')}
 function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden')}
@@ -235,27 +236,23 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
     document.getElementById('periodPreset').addEventListener('change',handlePeriodChange);
     // Re-compute when config inputs change
-    ['planBudgetUSD','costPerCredit','orchCostPerMsg','schoolYearEnd'].forEach(id=>{
+    ['planBudgetUSD','costPerCredit','schoolYearEnd'].forEach(id=>{
         document.getElementById(id).addEventListener('change',()=>{if(STATE.loaded){recalculate();renderAll()}});
     });
     hideLoading();
 });
 function calibrate(){
     if(!STATE.loaded){alert('Carga datos primero');return}
-    const vfTotal=prompt('Ingresa el monto TOTAL gastado reportado por VoiceFlow (en USD).\nEjemplo: 12000');
+    const vfTotal=prompt('Ingresa el monto TOTAL de "Credits used" reportado por VoiceFlow (en USD).\nEjemplo: 12349.77');
     if(!vfTotal)return;
     const reported=parseFloat(vfTotal);if(isNaN(reported)||reported<=0){alert('Monto inválido');return}
-    // Total credit units from API
+    // credit_usage includes ALL costs. Total = credits × $/credit
     const totalCreditUnits=STATE.computed.credits.unfilteredTotal;
-    const totalMsgs=STATE.computed.msg.total;
-    const orchCost=totalMsgs*getOrchCostPerMsg();
-    // reported = (totalCreditUnits × $/credit) + orchCost
-    // So $/credit = (reported - orchCost) / totalCreditUnits
-    if(totalCreditUnits===0){alert('No hay datos de créditos LLM para calibrar');return}
-    const newRate=Math.max(0,(reported-orchCost)/totalCreditUnits);
+    if(totalCreditUnits===0){alert('No hay datos de credit_usage para calibrar');return}
+    const newRate=reported/totalCreditUnits;
     document.getElementById('costPerCredit').value=newRate.toFixed(6);
     recalculate();renderAll();
-    alert(`Calibrado: $/crédito = ${newRate.toFixed(6)}\n\nLLM: ${totalCreditUnits.toLocaleString()} unidades × $${newRate.toFixed(6)} = $${(totalCreditUnits*newRate).toFixed(2)}\nOrquestación: ${totalMsgs.toLocaleString()} msgs × $${getOrchCostPerMsg()} = $${orchCost.toFixed(2)}\nTotal: $${reported.toFixed(2)}`);
+    alert(`✅ Calibrado!\n\n$/crédito = ${newRate.toFixed(6)}\n${totalCreditUnits.toLocaleString()} créditos API × $${newRate.toFixed(6)} = $${(totalCreditUnits*newRate).toFixed(2)}\n\nVF reporta: $${reported.toFixed(2)}`);
 }
 function switchTab(id){
     STATE.activeTab=id;
@@ -345,9 +342,13 @@ function updateFilterInfo(){
 }
 
 // ── Calculation Engine ──
+// KEY INSIGHT: credit_usage API returns ALL credit consumption (LLM + orchestration/messaging).
+// VoiceFlow charges $0.01 per user message (= 2 credits at $0.005/credit) and this is ALREADY
+// included in credit_usage. So: Total = Σ credit_usage × $0.005. Period. No separate orchestration.
+// interactions count is purely an engagement metric, NOT an additional cost.
 function recalculate(){
     const C={};
-    // DOMAIN A: Credits (filtered)
+    // ─── CREDITS (from credit_usage API = total cost source of truth) ───
     C.credits={total:0,unfilteredTotal:0,byProject:new Map(),byModel:new Map(),byMonth:new Map(),byDay:new Map(),byMonthModel:new Map()};
     STATE.raw.creditUsage.forEach((items,pid)=>{
         let pt=0;
@@ -366,24 +367,28 @@ function recalculate(){
         });
         C.credits.byProject.set(pid,pt);
     });
-    // Derived: USD
-    C.costLLM=credToUSD(C.credits.total);
-    // DOMAIN B: Messaging (never filtered)
+
+    // Total cost = credits × $0.005 (credit_usage already includes LLM + messaging charges)
+    C.costTotal=C.credits.total*getCostPerCredit();
+    C.costTotalUnfiltered=C.credits.unfilteredTotal*getCostPerCredit();
+
+    // ─── MESSAGING (informational engagement metrics, NOT additional cost) ───
     C.msg={total:0,users:0,byProject:new Map(),usersByProject:new Map(),byMonth:new Map(),byDay:new Map(),usersByMonth:new Map()};
     STATE.raw.interactions.forEach((items,pid)=>{let t=0;items.forEach(i=>{t+=i.count;C.msg.total+=i.count;const m=i.period.substring(0,7);C.msg.byMonth.set(m,(C.msg.byMonth.get(m)||0)+i.count);const d=i.period.split('T')[0];C.msg.byDay.set(d,(C.msg.byDay.get(d)||0)+i.count)});C.msg.byProject.set(pid,t)});
     STATE.raw.uniqueUsers.forEach((items,pid)=>{let t=0;items.forEach(i=>{t+=i.count;C.msg.users+=i.count;const m=i.period.substring(0,7);C.msg.usersByMonth.set(m,(C.msg.usersByMonth.get(m)||0)+i.count)});C.msg.usersByProject.set(pid,t)});
-    // COMBINED
-    
-    C.costOrchestration=C.msg.total*getOrchCostPerMsg();
-    C.costTotal=C.costLLM+C.costOrchestration;
-    C.credPerMsg=C.msg.total>0?C.credits.total/C.msg.total:0;
+
+    // Informational breakdown (not additive — both are within costTotal)
+    C.estimatedMsgCost=C.msg.total*ORCHESTRATION_COST_PER_MSG; // what VF charges for messaging
+    C.estimatedLLMCost=Math.max(0,C.costTotal-C.estimatedMsgCost); // remainder = LLM
     C.costPerMsg=C.msg.total>0?C.costTotal/C.msg.total:0;
     C.costPerUser=C.msg.users>0?C.costTotal/C.msg.users:0;
+
     // OVERAGE
     const budget=getPlanBudget();
     C.budget=budget;
     C.overage=Math.max(0,C.costTotal-budget);
     C.budgetPct=budget>0?(C.costTotal/budget*100):0;
+
     // PROJECTION
     const dStart=new Date(STATE.dateRange.start),dEnd=new Date(STATE.dateRange.end);
     const daysElapsed=Math.max(1,(dEnd-dStart)/(864e5));
@@ -393,21 +398,26 @@ function recalculate(){
     const totalDaysToSchoolEnd=Math.max(1,(schoolEnd-dStart)/(864e5));
     C.projectedTotalCost=C.dailyRate*totalDaysToSchoolEnd;
     C.projectedOverage=Math.max(0,C.projectedTotalCost-budget);
-    C.projectedExtraCost=Math.max(0,C.dailyRate*daysToSchoolEnd); // cost from today to end
-    // Weighted (last 7 days)
+    C.projectedExtraCost=Math.max(0,C.dailyRate*daysToSchoolEnd);
+
+    // Weighted projection (last 7 days of credit_usage)
     const sortedDays=[...C.credits.byDay.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
     const last7=sortedDays.slice(-7);
     if(last7.length>0){
-        const r7=last7.reduce((s,[,v])=>s+v,0);const dailyRecent=credToUSD(r7/last7.length);
-        // add orchestration for recent days
-        const last7Msgs=[...C.msg.byDay.entries()].sort((a,b)=>a[0].localeCompare(b[0])).slice(-7);
-        const r7Msgs=last7Msgs.reduce((s,[,v])=>s+v,0);const dailyRecentOrch=(r7Msgs/Math.max(1,last7Msgs.length))*getOrchCostPerMsg();
-        C.dailyRateRecent=dailyRecent+dailyRecentOrch;
+        const r7=last7.reduce((s,[,v])=>s+v,0);
+        C.dailyRateRecent=(r7/last7.length)*getCostPerCredit();
         C.projectedExtraCostWeighted=C.dailyRateRecent*daysToSchoolEnd;
         C.projectedTotalWeighted=C.costTotal+C.projectedExtraCostWeighted;
         C.projectedOverageWeighted=Math.max(0,C.projectedTotalWeighted-budget);
     }else{C.dailyRateRecent=C.dailyRate;C.projectedExtraCostWeighted=C.projectedExtraCost;C.projectedTotalWeighted=C.projectedTotalCost;C.projectedOverageWeighted=C.projectedOverage}
     C.daysToSchoolEnd=daysToSchoolEnd;
+
+    // Diagnostic
+    console.log(`📊 credit_usage total: ${C.credits.total} credits = ${fmtUSD(C.costTotal)} | VF pricing: ${fmtUSD(C.costTotal)}`);
+    console.log(`📨 interactions: ${C.msg.total} msgs (est. ${fmtUSD(C.estimatedMsgCost)} included in total)`);
+    console.log(`🤖 LLM estimated: ${fmtUSD(C.estimatedLLMCost)} (total - messaging)`);
+    console.log(`💰 Budget: ${fmtUSD(budget)} | Overage: ${fmtUSD(C.overage)}`);
+
     STATE.computed=C;
 }
 
@@ -432,11 +442,11 @@ function renderDashboard(){
     </div>`:`<div class="overage-banner safe"><div style="display:flex;align-items:center;gap:.75rem"><span style="font-size:1.3rem">✅</span><div><strong>Dentro del presupuesto</strong> — ${fmtUSD(C.costTotal)} de ${fmtUSD(budget)} (${C.budgetPct.toFixed(1)}%)</div></div></div>`;
     // Cost metrics
     document.getElementById('costMetrics').innerHTML=`
-        <div class="metric-card mc-indigo"><div class="metric-label">Costo LLM${filterNote}</div><div class="metric-value">${fmtUSD(C.costLLM)}</div><div class="metric-sub">${fmtNum(C.credits.total)} créditos</div></div>
-        <div class="metric-card mc-cyan"><div class="metric-label">Costo Mensajería</div><div class="metric-value">${fmtUSD(C.costOrchestration)}</div><div class="metric-sub">${fmtNum(C.msg.total)} msgs × $0.01 c/u</div></div>
-        <div class="metric-card mc-amber"><div class="metric-label">Costo Total</div><div class="metric-value">${fmtUSD(C.costTotal)}</div><div class="metric-sub">${C.budgetPct.toFixed(1)}% del presupuesto</div></div>
-        <div class="metric-card mc-orange"><div class="metric-label">$/Mensaje Promedio</div><div class="metric-value">${fmtUSD(C.costPerMsg)}</div><div class="metric-sub">LLM + orquestación por mensaje</div></div>
-        <div class="metric-card mc-violet"><div class="metric-label">Burn Rate Diario</div><div class="metric-value">${fmtUSD(C.dailyRateRecent)}</div><div class="metric-sub">últimos 7 días</div></div>
+        <div class="metric-card mc-indigo"><div class="metric-label">Costo Total (credit_usage)${filterNote}</div><div class="metric-value">${fmtUSD(C.costTotal)}</div><div class="metric-sub">${fmtNum(C.credits.total)} créditos × $${getCostPerCredit()}</div></div>
+        <div class="metric-card mc-cyan"><div class="metric-label">↳ Est. LLM <span class="info-icon" data-tooltip="Costo total menos el componente de mensajería. Incluye tokens input+output de todos los modelos.">i</span></div><div class="metric-value">${fmtUSD(C.estimatedLLMCost)}</div><div class="metric-sub">total - mensajería</div></div>
+        <div class="metric-card mc-violet"><div class="metric-label">↳ Est. Mensajería <span class="info-icon" data-tooltip="VoiceFlow cobra $0.01 por cada mensaje del usuario. Ya incluido en credit_usage.">i</span></div><div class="metric-value">${fmtUSD(C.estimatedMsgCost)}</div><div class="metric-sub">${fmtNum(C.msg.total)} msgs × $0.01</div></div>
+        <div class="metric-card mc-orange"><div class="metric-label">$/Mensaje Total</div><div class="metric-value">${fmtUSD(C.costPerMsg)}</div><div class="metric-sub">LLM + orquestación promedio</div></div>
+        <div class="metric-card mc-amber"><div class="metric-label">Burn Rate Diario</div><div class="metric-value">${fmtUSD(C.dailyRateRecent)}</div><div class="metric-sub">últimos 7 días</div></div>
         <div class="metric-card mc-rose"><div class="metric-label">Burn Rate Mensual</div><div class="metric-value">${fmtUSD(C.dailyRateRecent*30)}</div><div class="metric-sub">estimado 30 días</div></div>`;
     // Projection metrics
     document.getElementById('projMetrics').innerHTML=`
@@ -453,11 +463,12 @@ function renderMonthlyTable(){
     if(!months.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr>';return}
     let prev=null;
     tbody.innerHTML=months.map(m=>{
-        const llm=credToUSD(C.credits.byMonth.get(m)||0),msgs=C.msg.byMonth.get(m)||0,orch=msgs*getOrchCostPerMsg(),total=llm+orch;
+        const total=credToUSD(C.credits.byMonth.get(m)||0),msgs=C.msg.byMonth.get(m)||0;
         const cpm=msgs>0?total/msgs:0;
         let trend='—';if(prev!==null){const d=total-prev,pct=prev>0?(d/prev*100).toFixed(1):0;trend=d>0?`<span style="color:var(--accent-rose)">↑ +${pct}%</span>`:d<0?`<span style="color:var(--accent-emerald)">↓ ${pct}%</span>`:`<span style="color:var(--text-muted)">=</span>`}
         prev=total;
-        return`<tr><td>${new Date(m+'-01').toLocaleDateString('es-MX',{year:'numeric',month:'long'})}</td><td class="mono text-right" style="color:var(--accent-indigo)">${fmtUSD(llm)}</td><td class="mono text-right">${fmtUSD(orch)}</td><td class="mono text-right" style="color:var(--accent-amber)">${fmtUSD(total)}</td><td class="mono text-right">${fmtNum(msgs)}</td><td class="mono text-right" style="color:var(--accent-orange)">${fmtUSD(cpm)}</td><td>${trend}</td></tr>`;
+        const users=C.msg.usersByMonth.get(m)||0;
+        return`<tr><td>${new Date(m+'-01').toLocaleDateString('es-MX',{year:'numeric',month:'long'})}</td><td class="mono text-right" style="color:var(--accent-indigo)">${fmtUSD(total)}</td><td class="mono text-right">${fmtNum(msgs)}</td><td class="mono text-right">${fmtNum(users)}</td><td class="mono text-right" style="color:var(--accent-orange)">${fmtUSD(cpm)}</td><td>${trend}</td></tr>`;
     }).join('');
 }
 
@@ -470,13 +481,12 @@ function renderCharts(){
         const ctx=document.getElementById('chartMonthlyCost').getContext('2d');
         STATE.charts.monthlyCost=new Chart(ctx,{type:'bar',data:{labels:months.map(m=>new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})),datasets:[
             {label:'LLM',data:months.map(m=>credToUSD(C.credits.byMonth.get(m)||0)),backgroundColor:'#6366f1cc'},
-            {label:'Mensajería',data:months.map(m=>(C.msg.byMonth.get(m)||0)*getOrchCostPerMsg()),backgroundColor:'#06b6d4cc'}
-        ]},options:{...CHART_OPTS,scales:{...CHART_OPTS.scales,x:{...CHART_OPTS.scales.x,stacked:true},y:{...CHART_OPTS.scales.y,stacked:true}}}});
+        ]},options:{...CHART_OPTS,plugins:{...CHART_OPTS.plugins,legend:{display:false}}}});
     }
     // Daily cost line
     destroyChart('dailyCost');const days=[...C.credits.byDay.keys()].sort();
     if(days.length){
-        const vals=days.map(d=>{const llm=credToUSD(C.credits.byDay.get(d)||0),orch=(C.msg.byDay.get(d)||0)*getOrchCostPerMsg();return llm+orch});
+        const vals=days.map(d=>credToUSD(C.credits.byDay.get(d)||0));
         const ma7=vals.map((_,i)=>{const sl=vals.slice(Math.max(0,i-6),i+1);return sl.reduce((a,b)=>a+b,0)/sl.length});
         const ctx=document.getElementById('chartDailyCost').getContext('2d');
         STATE.charts.dailyCost=new Chart(ctx,{type:'line',data:{labels:days.map(d=>new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short'})),datasets:[
@@ -490,7 +500,7 @@ function renderCharts(){
     if(ml.length){const ctx=document.getElementById('chartByModel').getContext('2d');STATE.charts.byModel=new Chart(ctx,{type:'doughnut',data:{labels:ml,datasets:[{data:md,backgroundColor:mc,borderColor:'#1a2236',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#8892a8',font:{size:11},padding:8,boxWidth:12}},tooltip:{...CHART_OPTS.plugins.tooltip,callbacks:{label:c=>{const s=md.reduce((a,b)=>a+b,0);return`${c.label}: ${fmtUSD(c.raw)} (${s>0?(c.raw/s*100).toFixed(1):0}%)`}}}}}});}
     // By grade bar
     destroyChart('byGrade');const gl=[],gd=[];
-    PROJECTS.forEach((p,i)=>{gl.push(`${p.grade}°`);const cr=C.credits.byProject.get(p.id)||0;const ms=C.msg.byProject.get(p.id)||0;gd.push(credToUSD(cr)+ms*getOrchCostPerMsg())});
+    PROJECTS.forEach((p,i)=>{gl.push(`${p.grade}°`);const cr=C.credits.byProject.get(p.id)||0;const ms=C.msg.byProject.get(p.id)||0;gd.push(credToUSD(cr))});
     const ctx=document.getElementById('chartByGrade').getContext('2d');STATE.charts.byGrade=new Chart(ctx,{type:'bar',data:{labels:gl,datasets:[{label:'Costo USD',data:gd,backgroundColor:GRADE_COLORS.map(c=>c+'cc'),borderColor:GRADE_COLORS,borderWidth:1}]},options:{...CHART_OPTS,plugins:{...CHART_OPTS.plugins,legend:{display:false}}}});
 }
 
@@ -498,9 +508,9 @@ function renderInsights(){
     const C=STATE.computed;let topModel='',topModelCost=0;
     C.credits.byModel.forEach((d,m)=>{const c=credToUSD(d.total);if(c>topModelCost){topModelCost=c;topModel=m}});
     const topModelData=C.credits.byModel.get(topModel);const ioRatio=topModelData&&topModelData.output>0?(topModelData.input/topModelData.output).toFixed(1):'N/A';
-    let topGrade=null,topGradeCost=0;PROJECTS.forEach(p=>{const c=credToUSD(C.credits.byProject.get(p.id)||0)+(C.msg.byProject.get(p.id)||0)*getOrchCostPerMsg();if(c>topGradeCost){topGradeCost=c;topGrade=p}});
+    let topGrade=null,topGradeCost=0;PROJECTS.forEach(p=>{const c=credToUSD(C.credits.byProject.get(p.id)||0);if(c>topGradeCost){topGradeCost=c;topGrade=p}});
     document.getElementById('insightsGrid').innerHTML=`
-    <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(99,102,241,.15)">🤖</div><div class="insight-card-title">Modelo Más Caro</div></div><div class="insight-card-body"><strong>${topModel}</strong> ha costado <strong>${fmtUSD(topModelCost)}</strong> (${C.costLLM>0?(topModelCost/C.costLLM*100).toFixed(1):0}% del LLM). Ratio I/O: <strong>${ioRatio}:1</strong>${parseFloat(ioRatio)>10?'<br>Ratio alto = mucho contexto enviado vs poco generado. Oportunidad de optimización.':''}</div></div>
+    <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(99,102,241,.15)">🤖</div><div class="insight-card-title">Modelo Más Caro</div></div><div class="insight-card-body"><strong>${topModel}</strong> ha costado <strong>${fmtUSD(topModelCost)}</strong> (${C.costTotal>0?(topModelCost/C.costTotal*100).toFixed(1):0}% del LLM). Ratio I/O: <strong>${ioRatio}:1</strong>${parseFloat(ioRatio)>10?'<br>Ratio alto = mucho contexto enviado vs poco generado. Oportunidad de optimización.':''}</div></div>
     <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(244,63,94,.15)">💸</div><div class="insight-card-title">Costo Extra Necesario</div></div><div class="insight-card-body">Al ritmo actual de <strong>${fmtUSD(C.dailyRateRecent)}/día</strong>, los próximos <strong>${Math.round(C.daysToSchoolEnd)} días</strong> costarán ~<strong>${fmtUSD(C.projectedExtraCostWeighted)}</strong> adicionales.${C.projectedOverageWeighted>0?`<br>Overage total proyectado: <strong>${fmtUSD(C.projectedOverageWeighted)}</strong> sobre el presupuesto de ${fmtUSD(C.budget)}.`:''}</div></div>
     <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(16,185,129,.15)">🏫</div><div class="insight-card-title">Grado Más Caro</div></div><div class="insight-card-body"><strong>${topGrade?topGrade.name:'N/A'}</strong>: <strong>${fmtUSD(topGradeCost)}</strong> total. ${topGrade?fmtNum(C.msg.byProject.get(topGrade.id)||0):0} mensajes, ${topGrade?fmtNum(C.msg.usersByProject.get(topGrade.id)||0):0} usuarios.</div></div>
     <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(6,182,212,.15)">📊</div><div class="insight-card-title">Eficiencia</div></div><div class="insight-card-body">Costo promedio por mensaje: <strong>${fmtUSD(C.costPerMsg)}</strong>. Costo promedio por usuario: <strong>${fmtUSD(C.costPerUser)}</strong>.<br>Msgs por usuario: <strong>${C.msg.users>0?(C.msg.total/C.msg.users).toFixed(1):'—'}</strong>.</div></div>`;
@@ -510,7 +520,7 @@ function renderInsights(){
 function renderModelsTab(){
     const C=STATE.computed,con=document.getElementById('tab-models');let rows='';
     C.credits.byModel.forEach((d,m)=>{
-        const cost=credToUSD(d.total),pct=C.costLLM>0?(cost/C.costLLM*100).toFixed(1):0;
+        const cost=credToUSD(d.total),pct=C.costTotal>0?(cost/C.costTotal*100).toFixed(1):0;
         const ratio=d.output>0?(d.input/d.output).toFixed(1):'N/A';
         const ex=STATE.excludedModels.has(m);
         rows+=`<tr${ex?' style="opacity:.5;text-decoration:line-through"':''}><td><strong>${m}</strong>${ex?' <span class="badge badge-danger">excluido</span>':''}</td><td class="mono text-right">${fmtUSD(credToUSD(d.input))}</td><td class="mono text-right">${fmtUSD(credToUSD(d.output))}</td><td class="mono text-right" style="color:var(--accent-indigo)">${fmtUSD(cost)}</td><td class="mono text-right">${pct}%</td><td class="mono text-right">${ratio}</td></tr>`;
@@ -522,19 +532,19 @@ function renderModelsTab(){
 
     con.innerHTML=`<div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">🤖 Costo Real por Modelo (de credit_usage API)</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Modelo</th><th class="text-right">Costo Input</th><th class="text-right">Costo Output</th><th class="text-right">Total USD</th><th class="text-right">% LLM</th><th class="text-right">Ratio I/O</th></tr></thead><tbody>${rows}</tbody></table></div></div>
     <div class="chart-panel"><div class="chart-panel-title">📊 Costo Mensual por Modelo (Stacked)</div><div class="chart-wrap"><canvas id="chartModelMonthly"></canvas></div></div>
-    <div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">📋 Tabla de Precios VoiceFlow — Referencia ($/1K tokens)</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Vendor</th><th>Modelo</th><th class="text-right">$/1K Output</th><th class="text-right">$/1K Input</th></tr></thead><tbody>${pricingRows}<tr style="border-top:2px solid var(--border)"><td colspan="4" style="color:var(--accent-amber);font-size:.75rem">+ $${getOrchCostPerMsg()} por cada mensaje del usuario (orquestación)</td></tr></tbody></table></div></div>`;
+    <div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">📋 Tabla de Precios VoiceFlow — Referencia ($/1K tokens)</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Vendor</th><th>Modelo</th><th class="text-right">$/1K Output</th><th class="text-right">$/1K Input</th></tr></thead><tbody>${pricingRows}<tr style="border-top:2px solid var(--border)"><td colspan="4" style="color:var(--accent-amber);font-size:.75rem">+ $${ORCHESTRATION_COST_PER_MSG} por cada mensaje del usuario (orquestación)</td></tr></tbody></table></div></div>`;
     setTimeout(()=>{if(typeof Chart==='undefined')return;destroyChart('modelMonthly');
         const datasets=activeModels.map((m,i)=>({label:m,data:months.map(mo=>{const mm=C.credits.byMonthModel.get(mo);return mm?credToUSD(mm.get(m)||0):0}),backgroundColor:MODEL_COLORS[i%MODEL_COLORS.length]+'cc',borderColor:MODEL_COLORS[i%MODEL_COLORS.length],borderWidth:1}));
-        const ctx=document.getElementById('chartModelMonthly');if(ctx)STATE.charts.modelMonthly=new Chart(ctx.getContext('2d'),{type:'bar',data:{labels:months.map(m=>new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})),datasets},options:{...CHART_OPTS,scales:{...CHART_OPTS.scales,x:{...CHART_OPTS.scales.x,stacked:true},y:{...CHART_OPTS.scales.y,stacked:true}}}});
+        const ctx=document.getElementById('chartModelMonthly');if(ctx)STATE.charts.modelMonthly=new Chart(ctx.getContext('2d'),{type:'bar',data:{labels:months.map(m=>new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})),datasets},options:{...CHART_OPTS,plugins:{...CHART_OPTS.plugins,legend:{display:false}}}});
     },50);
 }
 
 // ── MESSAGING TAB ──
 function renderMessagingTab(){
     const C=STATE.computed,con=document.getElementById('tab-messaging');
-    let rows2='';PROJECTS.forEach(p=>{const m=C.msg.byProject.get(p.id)||0,u=C.msg.usersByProject.get(p.id)||0;rows2+=`<tr><td><strong>${p.grade}°</strong></td><td class="mono text-right">${fmtNum(m)}</td><td class="mono text-right" style="color:var(--accent-amber)">${fmtUSD(m*getOrchCostPerMsg())}</td><td class="mono text-right">${fmtNum(u)}</td><td class="mono text-right">${u>0?(m/u).toFixed(1):'—'}</td></tr>`});
+    let rows2='';PROJECTS.forEach(p=>{const m=C.msg.byProject.get(p.id)||0,u=C.msg.usersByProject.get(p.id)||0;rows2+=`<tr><td><strong>${p.grade}°</strong></td><td class="mono text-right">${fmtNum(m)}</td><td class="mono text-right" style="color:var(--accent-amber)">${fmtUSD(m*ORCHESTRATION_COST_PER_MSG)}</td><td class="mono text-right">${fmtNum(u)}</td><td class="mono text-right">${u>0?(m/u).toFixed(1):'—'}</td></tr>`});
     con.innerHTML=`<div class="section-label" style="color:var(--accent-cyan)">Dominio B — Mensajería (cada mensaje del usuario = $0.01)</div>
-    <div class="metrics-row"><div class="metric-card mc-cyan"><div class="metric-label">Total Mensajes</div><div class="metric-value">${fmtNum(C.msg.total)}</div><div class="metric-sub">costo orquestación: ${fmtUSD(C.msg.total*getOrchCostPerMsg())}</div></div><div class="metric-card mc-violet"><div class="metric-label">Usuarios Únicos</div><div class="metric-value">${fmtNum(C.msg.users)}</div></div><div class="metric-card mc-blue"><div class="metric-label">Msgs/Usuario</div><div class="metric-value">${C.msg.users>0?(C.msg.total/C.msg.users).toFixed(1):'—'}</div></div><div class="metric-card mc-amber"><div class="metric-label">Costo Orquestación/Msg</div><div class="metric-value">${fmtUSD(getOrchCostPerMsg())}</div><div class="metric-sub">fijo por VoiceFlow</div></div></div>
+    <div class="metrics-row"><div class="metric-card mc-cyan"><div class="metric-label">Total Mensajes</div><div class="metric-value">${fmtNum(C.msg.total)}</div><div class="metric-sub">costo orquestación: ${fmtUSD(C.msg.total*ORCHESTRATION_COST_PER_MSG)}</div></div><div class="metric-card mc-violet"><div class="metric-label">Usuarios Únicos</div><div class="metric-value">${fmtNum(C.msg.users)}</div></div><div class="metric-card mc-blue"><div class="metric-label">Msgs/Usuario</div><div class="metric-value">${C.msg.users>0?(C.msg.total/C.msg.users).toFixed(1):'—'}</div></div><div class="metric-card mc-amber"><div class="metric-label">Costo Orquestación/Msg</div><div class="metric-value">${fmtUSD(ORCHESTRATION_COST_PER_MSG)}</div><div class="metric-sub">fijo por VoiceFlow</div></div></div>
     <div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">📨 Mensajes y Costo de Orquestación por Grado</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Grado</th><th class="text-right">Mensajes</th><th class="text-right">Costo Orq.</th><th class="text-right">Usuarios</th><th class="text-right">Msgs/Usuario</th></tr></thead><tbody>${rows2}</tbody></table></div></div>`;
 }
 
@@ -543,11 +553,11 @@ function renderGradesTab(){
     const C=STATE.computed,con=document.getElementById('tab-grades');
     let rows='';PROJECTS.forEach(p=>{
         const cr=C.credits.byProject.get(p.id)||0,ms=C.msg.byProject.get(p.id)||0,us=C.msg.usersByProject.get(p.id)||0;
-        const costLLM=credToUSD(cr),costOrch=ms*getOrchCostPerMsg(),total=costLLM+costOrch;
+        const total=credToUSD(cr);
         const cpm=ms>0?total/ms:0;
-        rows+=`<tr><td><strong>${p.grade}°</strong></td><td class="mono text-right" style="color:var(--accent-indigo)">${fmtUSD(costLLM)}</td><td class="mono text-right">${fmtUSD(costOrch)}</td><td class="mono text-right" style="color:var(--accent-amber)">${fmtUSD(total)}</td><td class="mono text-right">${fmtNum(ms)}</td><td class="mono text-right">${fmtNum(us)}</td><td class="mono text-right" style="color:var(--accent-orange)">${fmtUSD(cpm)}</td></tr>`;
+        rows+=`<tr><td><strong>${p.grade}°</strong></td><td class="mono text-right" style="color:var(--accent-indigo)">${fmtUSD(total)}</td><td class="mono text-right">${fmtNum(ms)}</td><td class="mono text-right">${fmtNum(us)}</td><td class="mono text-right" style="color:var(--accent-orange)">${fmtUSD(cpm)}</td></tr>`;
     });
-    con.innerHTML=`<div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">🏫 Costo por Grado</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Grado</th><th class="text-right">Costo LLM</th><th class="text-right">Mensajería</th><th class="text-right">Total USD</th><th class="text-right">Mensajes</th><th class="text-right">Usuarios</th><th class="text-right">$/Msg</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    con.innerHTML=`<div class="data-table-wrap"><div class="data-table-header"><div class="data-table-title">🏫 Costo por Grado (de credit_usage)</div></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Grado</th><th class="text-right">Costo Total</th><th class="text-right">Mensajes</th><th class="text-right">Usuarios</th><th class="text-right">$/Msg</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 // ── PROJECTIONS TAB ──
@@ -572,7 +582,7 @@ function renderProjectionsTab(){
     </div>
     <div class="section-label" style="color:var(--accent-amber)">¿Cómo reducir costos?</div>
     <div class="insights-grid">
-        <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(99,102,241,.15)">🔬</div><div class="insight-card-title">Filtrar Modelos Caros</div></div><div class="insight-card-body">Usa los chips de filtro (arriba) para excluir modelos experimentales y ver cuánto costaría con solo el modelo definitivo. La proyección se recalcula en tiempo real.${STATE.excludedModels.size>0?`<br><br><strong>Con filtros actuales:</strong> costo LLM = ${fmtUSD(C.costLLM)} (sin filtro sería ${fmtUSD(credToUSD(C.credits.unfilteredTotal))})`:''}</div></div>
+        <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(99,102,241,.15)">🔬</div><div class="insight-card-title">Filtrar Modelos Caros</div></div><div class="insight-card-body">Usa los chips de filtro (arriba) para excluir modelos experimentales y ver cuánto costaría con solo el modelo definitivo. La proyección se recalcula en tiempo real.${STATE.excludedModels.size>0?`<br><br><strong>Con filtros actuales:</strong> costo LLM = ${fmtUSD(C.costTotal)} (sin filtro sería ${fmtUSD(credToUSD(C.credits.unfilteredTotal))})`:''}</div></div>
         <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(16,185,129,.15)">💡</div><div class="insight-card-title">Optimizar Prompts</div></div><div class="insight-card-body">Reducir el tamaño del system prompt y las inyecciones de KB reduce créditos de input (que suelen ser 5-40x más que output). Revisa el ratio I/O en la pestaña de Modelos.</div></div>
         <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(245,158,11,.15)">🔄</div><div class="insight-card-title">Cambiar a Modelo Más Barato</div></div><div class="insight-card-body">VoiceFlow cobra créditos proporcionales al costo del modelo. GPT-4o mini (0.08x) vs GPT-4o (2.5x) = ~30x diferencia en créditos por las mismas tokens. Claude Haiku vs Sonnet tiene una diferencia similar.</div></div>
     </div>`;
@@ -581,10 +591,10 @@ function renderProjectionsTab(){
 // ── CSV Export ──
 function exportCSV(){
     if(!STATE.loaded){alert('Carga datos primero');return}
-    const C=STATE.computed;let csv='Grado,Costo LLM,Costo Mensajería,Total USD,Mensajes,Usuarios,$/Msg\n';
-    PROJECTS.forEach(p=>{const cr=C.credits.byProject.get(p.id)||0,ms=C.msg.byProject.get(p.id)||0,us=C.msg.usersByProject.get(p.id)||0;const l=credToUSD(cr),h=ms*getOrchCostPerMsg(),t=l+h;csv+=`"${p.name}",${l.toFixed(2)},${h.toFixed(2)},${t.toFixed(2)},${ms},${us},${ms>0?(t/ms).toFixed(4):0}\n`});
+    const C=STATE.computed;let csv='Grado,Costo Total,Mensajes,Usuarios,$/Msg\n';
+    PROJECTS.forEach(p=>{const cr=C.credits.byProject.get(p.id)||0,ms=C.msg.byProject.get(p.id)||0,us=C.msg.usersByProject.get(p.id)||0;const t=credToUSD(cr);csv+=`"${p.name}",${t.toFixed(2)},${ms},${us},${ms>0?(t/ms).toFixed(4):0}\n`});
     csv+='\nModelos LLM\nModelo,Costo Input,Costo Output,Total USD,% LLM\n';
-    C.credits.byModel.forEach((d,m)=>{csv+=`"${m}",${credToUSD(d.input).toFixed(2)},${credToUSD(d.output).toFixed(2)},${credToUSD(d.total).toFixed(2)},${C.costLLM>0?(credToUSD(d.total)/C.costLLM*100).toFixed(1):0}\n`});
+    C.credits.byModel.forEach((d,m)=>{csv+=`"${m}",${credToUSD(d.input).toFixed(2)},${credToUSD(d.output).toFixed(2)},${credToUSD(d.total).toFixed(2)},${C.costTotal>0?(credToUSD(d.total)/C.costTotal*100).toFixed(1):0}\n`});
     csv+=`\nResumen\nPresupuesto,${C.budget}\nGastado,${C.costTotal.toFixed(2)}\nOverage,${C.overage.toFixed(2)}\nProyectado fin ciclo,${C.projectedTotalWeighted.toFixed(2)}\nOverage proyectado,${C.projectedOverageWeighted.toFixed(2)}\n`;
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=`xolo-costs-${new Date().toISOString().split('T')[0]}.csv`;link.click();
 }
