@@ -128,8 +128,9 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         </div>
         <div class="ctrl-group" id="customDateStart" style="display:none"><label>Desde</label><input type="date" class="ctrl-input" id="startDate" value="2025-01-05"></div>
         <div class="ctrl-group" id="customDateEnd" style="display:none"><label>Hasta</label><input type="date" class="ctrl-input" id="endDate"></div>
-        <div class="ctrl-group"><label>Presupuesto Plan (USD)</label><input type="number" class="ctrl-input" id="planBudgetUSD" value="12400" min="0" step="1" style="width:120px"></div>
-        <div class="ctrl-group"><label>$/Unidad Crédito API <span class="info-icon" data-tooltip="El factor de conversión entre la unidad 'count' de la API y dólares. Default 0.005 (sistema antiguo). Si VF cambió, usa Calibrar para ajustar.">i</span></label><input type="number" class="ctrl-input" id="costPerCredit" value="0.005" min="0" step="0.0001" style="width:110px"></div>
+        <div class="ctrl-group"><label>Plan Original (USD)</label><input type="number" class="ctrl-input" id="planBudgetUSD" value="12000" min="0" step="1" style="width:120px"></div>
+        <div class="ctrl-group"><label>Top-ups Agregados (USD)</label><input type="number" class="ctrl-input" id="topupsAdded" value="400" min="0" step="1" style="width:110px"></div>
+        <div class="ctrl-group"><label>$/Crédito API</label><input type="number" class="ctrl-input" id="costPerCredit" value="0.005" min="0" step="0.0001" style="width:100px"></div>
         <div class="ctrl-group"><label>Fin Ciclo Escolar</label><input type="date" class="ctrl-input" id="schoolYearEnd" value="2026-06-30" style="width:160px"></div>
         <div class="ctrl-spacer"></div>
         <button class="btn btn-primary" id="btnFetch" onclick="fetchAllData()">▶ Cargar Datos</button>
@@ -217,7 +218,8 @@ const MODEL_COLORS=['#6366f1','#f43f5e','#10b981','#f59e0b','#06b6d4','#8b5cf6',
 let STATE={raw:{creditUsage:new Map(),interactions:new Map(),uniqueUsers:new Map()},discoveredModels:[],excludedModels:new Set(),computed:null,activeTab:"dashboard",charts:{},loaded:false,dateRange:{start:null,end:null}};
 
 // ── Helpers ──
-function getPlanBudget(){return parseFloat(document.getElementById('planBudgetUSD').value)||12400}
+function getPlanBudget(){return parseFloat(document.getElementById('planBudgetUSD').value)||12000}
+function getTopupsAdded(){return parseFloat(document.getElementById('topupsAdded').value)||0}
 function getCostPerCredit(){return parseFloat(document.getElementById('costPerCredit').value)||0.005}
 function getSchoolYearEnd(){return document.getElementById('schoolYearEnd').value}
 function credToUSD(c){return c*getCostPerCredit()}
@@ -236,7 +238,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
     document.getElementById('periodPreset').addEventListener('change',handlePeriodChange);
     // Re-compute when config inputs change
-    ['planBudgetUSD','costPerCredit','schoolYearEnd'].forEach(id=>{
+    ['planBudgetUSD','topupsAdded','costPerCredit','schoolYearEnd'].forEach(id=>{
         document.getElementById(id).addEventListener('change',()=>{if(STATE.loaded){recalculate();renderAll()}});
     });
     hideLoading();
@@ -377,46 +379,49 @@ function recalculate(){
     STATE.raw.interactions.forEach((items,pid)=>{let t=0;items.forEach(i=>{t+=i.count;C.msg.total+=i.count;const m=i.period.substring(0,7);C.msg.byMonth.set(m,(C.msg.byMonth.get(m)||0)+i.count);const d=i.period.split('T')[0];C.msg.byDay.set(d,(C.msg.byDay.get(d)||0)+i.count)});C.msg.byProject.set(pid,t)});
     STATE.raw.uniqueUsers.forEach((items,pid)=>{let t=0;items.forEach(i=>{t+=i.count;C.msg.users+=i.count;const m=i.period.substring(0,7);C.msg.usersByMonth.set(m,(C.msg.usersByMonth.get(m)||0)+i.count)});C.msg.usersByProject.set(pid,t)});
 
-    // Informational breakdown (not additive — both are within costTotal)
-    C.estimatedMsgCost=C.msg.total*ORCHESTRATION_COST_PER_MSG; // what VF charges for messaging
-    C.estimatedLLMCost=Math.max(0,C.costTotal-C.estimatedMsgCost); // remainder = LLM
+    // Informational breakdown
+    C.estimatedMsgCost=C.msg.total*ORCHESTRATION_COST_PER_MSG;
+    C.estimatedLLMCost=Math.max(0,C.costTotal-C.estimatedMsgCost);
     C.costPerMsg=C.msg.total>0?C.costTotal/C.msg.total:0;
     C.costPerUser=C.msg.users>0?C.costTotal/C.msg.users:0;
 
-    // OVERAGE
-    const budget=getPlanBudget();
-    C.budget=budget;
-    C.overage=Math.max(0,C.costTotal-budget);
-    C.budgetPct=budget>0?(C.costTotal/budget*100):0;
+    // BUDGET & TOP-UPS
+    const plan=getPlanBudget();
+    const topups=getTopupsAdded();
+    C.plan=plan;
+    C.topupsAdded=topups;
+    C.totalBudget=plan+topups;
+    C.topupsSpent=Math.max(0,C.costTotal-plan);
+    C.topupsRemaining=Math.max(0,topups-C.topupsSpent);
+    C.budgetPct=plan>0?(C.costTotal/plan*100):0;
 
-    // PROJECTION
-    const dStart=new Date(STATE.dateRange.start),dEnd=new Date(STATE.dateRange.end);
-    const daysElapsed=Math.max(1,(dEnd-dStart)/(864e5));
-    C.dailyRate=C.costTotal/daysElapsed;
-    const schoolEnd=new Date(getSchoolYearEnd());
-    const daysToSchoolEnd=Math.max(0,(schoolEnd-new Date())/(864e5));
-    const totalDaysToSchoolEnd=Math.max(1,(schoolEnd-dStart)/(864e5));
-    C.projectedTotalCost=C.dailyRate*totalDaysToSchoolEnd;
-    C.projectedOverage=Math.max(0,C.projectedTotalCost-budget);
-    C.projectedExtraCost=Math.max(0,C.dailyRate*daysToSchoolEnd);
-
-    // Weighted projection (last 7 days of credit_usage)
+    // YESTERDAY'S CONSUMPTION — the key projection metric
     const sortedDays=[...C.credits.byDay.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+    const lastDay=sortedDays.length>0?sortedDays[sortedDays.length-1]:null;
+    const prevDay=sortedDays.length>1?sortedDays[sortedDays.length-2]:null;
+    C.yesterdayDate=lastDay?lastDay[0]:'N/A';
+    C.yesterdayCredits=lastDay?lastDay[1]:0;
+    C.yesterdayCost=C.yesterdayCredits*getCostPerCredit();
+    C.yesterdayMsgs=C.msg.byDay.get(C.yesterdayDate)||0;
+    C.prevDayDate=prevDay?prevDay[0]:'N/A';
+    C.prevDayCost=prevDay?prevDay[1]*getCostPerCredit():0;
+
+    // PROJECTION — based on yesterday's rate (new config)
+    const schoolEnd=new Date(getSchoolYearEnd());
+    C.daysToSchoolEnd=Math.max(0,(schoolEnd-new Date())/(864e5));
+    C.projectedFutureCost=C.yesterdayCost*C.daysToSchoolEnd;
+    C.additionalTopupsNeeded=Math.max(0,C.projectedFutureCost-C.topupsRemaining);
+
+    // Also 7-day avg for comparison
     const last7=sortedDays.slice(-7);
-    if(last7.length>0){
-        const r7=last7.reduce((s,[,v])=>s+v,0);
-        C.dailyRateRecent=(r7/last7.length)*getCostPerCredit();
-        C.projectedExtraCostWeighted=C.dailyRateRecent*daysToSchoolEnd;
-        C.projectedTotalWeighted=C.costTotal+C.projectedExtraCostWeighted;
-        C.projectedOverageWeighted=Math.max(0,C.projectedTotalWeighted-budget);
-    }else{C.dailyRateRecent=C.dailyRate;C.projectedExtraCostWeighted=C.projectedExtraCost;C.projectedTotalWeighted=C.projectedTotalCost;C.projectedOverageWeighted=C.projectedOverage}
-    C.daysToSchoolEnd=daysToSchoolEnd;
+    C.dailyRate7d=last7.length>0?(last7.reduce((s,[,v])=>s+v,0)/last7.length)*getCostPerCredit():0;
+    C.projFuture7d=C.dailyRate7d*C.daysToSchoolEnd;
+    C.addTopups7d=Math.max(0,C.projFuture7d-C.topupsRemaining);
 
     // Diagnostic
-    console.log(`📊 credit_usage total: ${C.credits.total} credits = ${fmtUSD(C.costTotal)} | VF pricing: ${fmtUSD(C.costTotal)}`);
-    console.log(`📨 interactions: ${C.msg.total} msgs (est. ${fmtUSD(C.estimatedMsgCost)} included in total)`);
-    console.log(`🤖 LLM estimated: ${fmtUSD(C.estimatedLLMCost)} (total - messaging)`);
-    console.log(`💰 Budget: ${fmtUSD(budget)} | Overage: ${fmtUSD(C.overage)}`);
+    console.log(`📊 Total: ${fmtUSD(C.costTotal)} | Plan: ${fmtUSD(plan)} | Top-ups: ${fmtUSD(topups)} (gastado: ${fmtUSD(C.topupsSpent)}, queda: ${fmtUSD(C.topupsRemaining)})`);
+    console.log(`📅 Ayer (${C.yesterdayDate}): ${fmtUSD(C.yesterdayCost)} (${C.yesterdayMsgs} msgs)`);
+    console.log(`⚡ ${Math.round(C.daysToSchoolEnd)} días × ${fmtUSD(C.yesterdayCost)}/día = ${fmtUSD(C.projectedFutureCost)} → top-ups extra: ${fmtUSD(C.additionalTopupsNeeded)}`);
 
     STATE.computed=C;
 }
@@ -427,40 +432,38 @@ function renderAll(){if(!STATE.computed)return;const t=STATE.activeTab;if(t==='d
 const CHART_OPTS={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8892a8',font:{size:11},boxWidth:12,padding:12}},tooltip:{backgroundColor:'#1a2236',borderColor:'#2a3550',borderWidth:1,titleColor:'#e8ecf4',bodyColor:'#8892a8',padding:10,cornerRadius:8}},scales:{x:{ticks:{color:'#5a6478',font:{size:10}},grid:{color:'rgba(42,53,80,.3)'}},y:{ticks:{color:'#5a6478',font:{size:10}},grid:{color:'rgba(42,53,80,.3)'}}}};
 
 function renderDashboard(){
-    const C=STATE.computed,budget=C.budget,filterNote=STATE.excludedModels.size>0?` (${STATE.excludedModels.size} modelo(s) excluido(s))`:'';
-    // Overage banner
-    const isOver=C.costTotal>=budget;
+    const C=STATE.computed,filterNote=STATE.excludedModels.size>0?` (${STATE.excludedModels.size} excluido(s))`:'';
+    // TOP-UPS BANNER
+    const isOver=C.costTotal>C.plan;
     document.getElementById('overageBanner').innerHTML=isOver?`
     <div class="overage-banner">
-        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem"><span style="font-size:1.5rem">🚨</span><div><div style="font-size:1.1rem;font-weight:800;color:var(--accent-rose)">PRESUPUESTO EXCEDIDO</div><div style="font-size:.82rem;color:var(--text-secondary)">El plan de ${fmtUSD(budget)} ya se consumió. Los top-ups están activos.</div></div></div>
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem"><span style="font-size:1.5rem">🚨</span><div><div style="font-size:1.1rem;font-weight:800;color:var(--accent-rose)">PLAN EXCEDIDO — Top-ups activos</div><div style="font-size:.82rem;color:var(--text-secondary)">Plan de ${fmtUSD(C.plan)} agotado. Top-ups: ${fmtUSD(C.topupsAdded)} agregados, ${fmtUSD(C.topupsSpent)} gastados, ${fmtUSD(C.topupsRemaining)} disponibles.</div></div></div>
         <div class="metrics-row" style="margin-bottom:0">
-            <div class="metric-card mc-rose"><div class="metric-label">Overage Actual</div><div class="metric-value">${fmtUSD(C.overage)}</div><div class="metric-sub">dinero extra ya gastado</div></div>
-            <div class="metric-card mc-amber"><div class="metric-label">Falta por Gastar (Est.)</div><div class="metric-value">${fmtUSD(C.projectedExtraCostWeighted)}</div><div class="metric-sub">de hoy al ${getSchoolYearEnd()} (~${Math.round(C.daysToSchoolEnd)} días)</div></div>
-            <div class="metric-card mc-orange"><div class="metric-label">Total Overage Proyectado</div><div class="metric-value">${fmtUSD(C.projectedOverageWeighted)}</div><div class="metric-sub">al fin del ciclo escolar</div></div>
-            <div class="metric-card mc-rose"><div class="metric-label">Costo Total Proyectado</div><div class="metric-value">${fmtUSD(C.projectedTotalWeighted)}</div><div class="metric-sub">plan (${fmtUSD(budget)}) + overage</div></div>
+            <div class="metric-card mc-amber"><div class="metric-label">📅 Consumo Ayer (${C.yesterdayDate})</div><div class="metric-value">${fmtUSD(C.yesterdayCost)}</div><div class="metric-sub">${C.yesterdayMsgs} mensajes${C.prevDayCost>0?` (día anterior: ${fmtUSD(C.prevDayCost)})`:''}</div></div>
+            <div class="metric-card mc-rose"><div class="metric-label">🔮 Top-ups Adicionales Necesarios</div><div class="metric-value" style="font-size:2rem">${fmtUSD(C.additionalTopupsNeeded)}</div><div class="metric-sub">basado en ayer × ${Math.round(C.daysToSchoolEnd)} días restantes</div></div>
+            <div class="metric-card mc-orange"><div class="metric-label">💸 Costo Futuro Estimado</div><div class="metric-value">${fmtUSD(C.projectedFutureCost)}</div><div class="metric-sub">de hoy al ${getSchoolYearEnd()}</div></div>
+            <div class="metric-card mc-violet"><div class="metric-label">Balance Top-ups</div><div class="metric-value">${fmtUSD(C.topupsRemaining)}</div><div class="metric-sub">de ${fmtUSD(C.topupsAdded)} agregados</div></div>
         </div>
-    </div>`:`<div class="overage-banner safe"><div style="display:flex;align-items:center;gap:.75rem"><span style="font-size:1.3rem">✅</span><div><strong>Dentro del presupuesto</strong> — ${fmtUSD(C.costTotal)} de ${fmtUSD(budget)} (${C.budgetPct.toFixed(1)}%)</div></div></div>`;
+    </div>`:`<div class="overage-banner safe"><div style="display:flex;align-items:center;gap:.75rem"><span style="font-size:1.3rem">✅</span><div><strong>Dentro del plan</strong> — ${fmtUSD(C.costTotal)} de ${fmtUSD(C.plan)} (${C.budgetPct.toFixed(1)}%)</div></div></div>`;
     // Cost metrics
     document.getElementById('costMetrics').innerHTML=`
-        <div class="metric-card mc-indigo"><div class="metric-label">Costo Total (credit_usage)${filterNote}</div><div class="metric-value">${fmtUSD(C.costTotal)}</div><div class="metric-sub">${fmtNum(C.credits.total)} créditos × $${getCostPerCredit()}</div></div>
-        <div class="metric-card mc-cyan"><div class="metric-label">↳ Est. LLM <span class="info-icon" data-tooltip="Costo total menos el componente de mensajería. Incluye tokens input+output de todos los modelos.">i</span></div><div class="metric-value">${fmtUSD(C.estimatedLLMCost)}</div><div class="metric-sub">total - mensajería</div></div>
-        <div class="metric-card mc-violet"><div class="metric-label">↳ Est. Mensajería <span class="info-icon" data-tooltip="VoiceFlow cobra $0.01 por cada mensaje del usuario. Ya incluido en credit_usage.">i</span></div><div class="metric-value">${fmtUSD(C.estimatedMsgCost)}</div><div class="metric-sub">${fmtNum(C.msg.total)} msgs × $0.01</div></div>
-        <div class="metric-card mc-orange"><div class="metric-label">$/Mensaje Total</div><div class="metric-value">${fmtUSD(C.costPerMsg)}</div><div class="metric-sub">LLM + orquestación promedio</div></div>
-        <div class="metric-card mc-amber"><div class="metric-label">Burn Rate Diario</div><div class="metric-value">${fmtUSD(C.dailyRateRecent)}</div><div class="metric-sub">últimos 7 días</div></div>
-        <div class="metric-card mc-rose"><div class="metric-label">Burn Rate Mensual</div><div class="metric-value">${fmtUSD(C.dailyRateRecent*30)}</div><div class="metric-sub">estimado 30 días</div></div>`;
+        <div class="metric-card mc-indigo"><div class="metric-label">Total Gastado${filterNote}</div><div class="metric-value">${fmtUSD(C.costTotal)}</div><div class="metric-sub">${C.budgetPct.toFixed(1)}% del plan de ${fmtUSD(C.plan)}</div></div>
+        <div class="metric-card mc-cyan"><div class="metric-label">Top-ups Gastados</div><div class="metric-value">${fmtUSD(C.topupsSpent)}</div><div class="metric-sub">de ${fmtUSD(C.topupsAdded)} agregados</div></div>
+        <div class="metric-card mc-orange"><div class="metric-label">$/Mensaje</div><div class="metric-value">${fmtUSD(C.costPerMsg)}</div><div class="metric-sub">promedio histórico</div></div>
+        <div class="metric-card mc-amber"><div class="metric-label">Consumo Ayer</div><div class="metric-value">${fmtUSD(C.yesterdayCost)}</div><div class="metric-sub">${C.yesterdayDate} — ${C.yesterdayMsgs} msgs</div></div>`;
     // Projection metrics
     document.getElementById('projMetrics').innerHTML=`
-        <div class="metric-card mc-amber"><div class="metric-label">Días Restantes</div><div class="metric-value">${Math.round(C.daysToSchoolEnd)}</div><div class="metric-sub">hasta ${getSchoolYearEnd()}</div></div>
-        <div class="metric-card mc-rose"><div class="metric-label">Costo Adicional Estimado</div><div class="metric-value">${fmtUSD(C.projectedExtraCostWeighted)}</div><div class="metric-sub">de hoy al fin del ciclo</div></div>
-        <div class="metric-card mc-orange"><div class="metric-label">Costo Total al Fin</div><div class="metric-value">${fmtUSD(C.projectedTotalWeighted)}</div><div class="metric-sub">gastado + proyectado</div></div>
-        <div class="metric-card ${C.projectedOverageWeighted>0?'mc-rose':'mc-emerald'}"><div class="metric-label">Overage al Fin</div><div class="metric-value">${fmtUSD(C.projectedOverageWeighted)}</div><div class="metric-sub">por encima de ${fmtUSD(budget)}</div></div>`;
+        <div class="metric-card mc-amber"><div class="metric-label">Días al Fin Ciclo</div><div class="metric-value">${Math.round(C.daysToSchoolEnd)}</div><div class="metric-sub">hasta ${getSchoolYearEnd()}</div></div>
+        <div class="metric-card mc-rose"><div class="metric-label">🔮 Top-ups Extra (Ayer)</div><div class="metric-value" style="font-size:1.5rem">${fmtUSD(C.additionalTopupsNeeded)}</div><div class="metric-sub">${fmtUSD(C.yesterdayCost)}/día × ${Math.round(C.daysToSchoolEnd)} días − ${fmtUSD(C.topupsRemaining)} disponible</div></div>
+        <div class="metric-card mc-orange"><div class="metric-label">Ref: Top-ups Extra (7d avg)</div><div class="metric-value">${fmtUSD(C.addTopups7d)}</div><div class="metric-sub">${fmtUSD(C.dailyRate7d)}/día promedio 7 días</div></div>
+        <div class="metric-card mc-violet"><div class="metric-label">Costo Total al Fin</div><div class="metric-value">${fmtUSD(C.costTotal+C.projectedFutureCost)}</div><div class="metric-sub">gastado + futuro estimado</div></div>`;
     renderMonthlyTable();renderCharts();renderInsights();
 }
 
 function renderMonthlyTable(){
     const C=STATE.computed;const allMonths=new Set([...C.credits.byMonth.keys(),...C.msg.byMonth.keys()]);const months=[...allMonths].sort();
     const tbody=document.getElementById('monthlyTableBody');
-    if(!months.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr>';return}
+    if(!months.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem">Sin datos</td></tr>';return}
     let prev=null;
     tbody.innerHTML=months.map(m=>{
         const total=credToUSD(C.credits.byMonth.get(m)||0),msgs=C.msg.byMonth.get(m)||0;
@@ -480,7 +483,7 @@ function renderCharts(){
     if(months.length){
         const ctx=document.getElementById('chartMonthlyCost').getContext('2d');
         STATE.charts.monthlyCost=new Chart(ctx,{type:'bar',data:{labels:months.map(m=>new Date(m+'-01').toLocaleDateString('es-MX',{month:'short',year:'2-digit'})),datasets:[
-            {label:'LLM',data:months.map(m=>credToUSD(C.credits.byMonth.get(m)||0)),backgroundColor:'#6366f1cc'},
+            {label:'Costo Total',data:months.map(m=>credToUSD(C.credits.byMonth.get(m)||0)),backgroundColor:'#6366f1cc'},
         ]},options:{...CHART_OPTS,plugins:{...CHART_OPTS.plugins,legend:{display:false}}}});
     }
     // Daily cost line
@@ -511,7 +514,7 @@ function renderInsights(){
     let topGrade=null,topGradeCost=0;PROJECTS.forEach(p=>{const c=credToUSD(C.credits.byProject.get(p.id)||0);if(c>topGradeCost){topGradeCost=c;topGrade=p}});
     document.getElementById('insightsGrid').innerHTML=`
     <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(99,102,241,.15)">🤖</div><div class="insight-card-title">Modelo Más Caro</div></div><div class="insight-card-body"><strong>${topModel}</strong> ha costado <strong>${fmtUSD(topModelCost)}</strong> (${C.costTotal>0?(topModelCost/C.costTotal*100).toFixed(1):0}% del LLM). Ratio I/O: <strong>${ioRatio}:1</strong>${parseFloat(ioRatio)>10?'<br>Ratio alto = mucho contexto enviado vs poco generado. Oportunidad de optimización.':''}</div></div>
-    <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(244,63,94,.15)">💸</div><div class="insight-card-title">Costo Extra Necesario</div></div><div class="insight-card-body">Al ritmo actual de <strong>${fmtUSD(C.dailyRateRecent)}/día</strong>, los próximos <strong>${Math.round(C.daysToSchoolEnd)} días</strong> costarán ~<strong>${fmtUSD(C.projectedExtraCostWeighted)}</strong> adicionales.${C.projectedOverageWeighted>0?`<br>Overage total proyectado: <strong>${fmtUSD(C.projectedOverageWeighted)}</strong> sobre el presupuesto de ${fmtUSD(C.budget)}.`:''}</div></div>
+    <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(244,63,94,.15)">💸</div><div class="insight-card-title">Costo Extra Necesario</div></div><div class="insight-card-body">Basado en el consumo de ayer (<strong>${fmtUSD(C.yesterdayCost)}</strong>), los próximos <strong>${Math.round(C.daysToSchoolEnd)} días</strong> costarán ~<strong>${fmtUSD(C.projectedFutureCost)}</strong>.<br>Top-ups restantes: <strong>${fmtUSD(C.topupsRemaining)}</strong>. <strong style="color:var(--accent-rose)">Necesitas ${fmtUSD(C.additionalTopupsNeeded)} más en top-ups.</strong>}</div></div>
     <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(16,185,129,.15)">🏫</div><div class="insight-card-title">Grado Más Caro</div></div><div class="insight-card-body"><strong>${topGrade?topGrade.name:'N/A'}</strong>: <strong>${fmtUSD(topGradeCost)}</strong> total. ${topGrade?fmtNum(C.msg.byProject.get(topGrade.id)||0):0} mensajes, ${topGrade?fmtNum(C.msg.usersByProject.get(topGrade.id)||0):0} usuarios.</div></div>
     <div class="insight-card"><div class="insight-card-header"><div class="insight-icon" style="background:rgba(6,182,212,.15)">📊</div><div class="insight-card-title">Eficiencia</div></div><div class="insight-card-body">Costo promedio por mensaje: <strong>${fmtUSD(C.costPerMsg)}</strong>. Costo promedio por usuario: <strong>${fmtUSD(C.costPerUser)}</strong>.<br>Msgs por usuario: <strong>${C.msg.users>0?(C.msg.total/C.msg.users).toFixed(1):'—'}</strong>.</div></div>`;
 }
@@ -568,15 +571,15 @@ function renderProjectionsTab(){
     <div class="insight-card" style="margin-bottom:1.25rem;border-color:var(--accent-rose)">
         <div class="insight-card-header"><div class="insight-icon" style="background:rgba(244,63,94,.15)">🚨</div><div class="insight-card-title">Resumen de Overage</div></div>
         <div class="insight-card-body">
-            <strong>Presupuesto:</strong> ${fmtUSD(C.budget)}<br>
+            <strong>Presupuesto:</strong> ${fmtUSD(C.plan)}<br>
             <strong>Gastado hasta hoy:</strong> ${fmtUSD(C.costTotal)} (${C.budgetPct.toFixed(1)}%)<br>
             <strong>Overage actual:</strong> ${fmtUSD(C.overage)}<br><br>
-            <strong>Burn rate diario (7d):</strong> ${fmtUSD(C.dailyRateRecent)}<br>
-            <strong>Burn rate mensual:</strong> ${fmtUSD(C.dailyRateRecent*30)}<br>
+            <strong>Burn rate diario (7d):</strong> ${fmtUSD(C.dailyRate7d)}<br>
+            <strong>Burn rate mensual:</strong> ${fmtUSD(C.dailyRate7d*30)}<br>
             <strong>Días restantes:</strong> ${Math.round(C.daysToSchoolEnd)} (hasta ${getSchoolYearEnd()})<br><br>
-            <strong style="color:var(--accent-rose)">Costo adicional estimado: ${fmtUSD(C.projectedExtraCostWeighted)}</strong><br>
-            <strong style="color:var(--accent-rose)">Costo total al fin del ciclo: ${fmtUSD(C.projectedTotalWeighted)}</strong><br>
-            <strong style="color:var(--accent-rose)">Overage total: ${fmtUSD(C.projectedOverageWeighted)}</strong>
+            <strong style="color:var(--accent-rose)">Costo adicional estimado: ${fmtUSD(C.projectedFutureCost)}</strong><br>
+            <strong style="color:var(--accent-rose)">Costo total al fin del ciclo: ${fmtUSD(C.costTotal+C.projectedFutureCost)}</strong><br>
+            <strong style="color:var(--accent-rose)">Overage total: ${fmtUSD(C.additionalTopupsNeeded)}</strong>
             ${filterNote}
         </div>
     </div>
@@ -595,7 +598,7 @@ function exportCSV(){
     PROJECTS.forEach(p=>{const cr=C.credits.byProject.get(p.id)||0,ms=C.msg.byProject.get(p.id)||0,us=C.msg.usersByProject.get(p.id)||0;const t=credToUSD(cr);csv+=`"${p.name}",${t.toFixed(2)},${ms},${us},${ms>0?(t/ms).toFixed(4):0}\n`});
     csv+='\nModelos LLM\nModelo,Costo Input,Costo Output,Total USD,% LLM\n';
     C.credits.byModel.forEach((d,m)=>{csv+=`"${m}",${credToUSD(d.input).toFixed(2)},${credToUSD(d.output).toFixed(2)},${credToUSD(d.total).toFixed(2)},${C.costTotal>0?(credToUSD(d.total)/C.costTotal*100).toFixed(1):0}\n`});
-    csv+=`\nResumen\nPresupuesto,${C.budget}\nGastado,${C.costTotal.toFixed(2)}\nOverage,${C.overage.toFixed(2)}\nProyectado fin ciclo,${C.projectedTotalWeighted.toFixed(2)}\nOverage proyectado,${C.projectedOverageWeighted.toFixed(2)}\n`;
+    csv+=`\nResumen\nPlan,${C.plan}\nTop-ups,${C.topupsAdded}\nGastado,${C.costTotal.toFixed(2)}\nTop-ups gastados,${C.topupsSpent.toFixed(2)}\nConsumo ayer,${C.yesterdayCost.toFixed(2)}\nTop-ups adicionales,${C.additionalTopupsNeeded.toFixed(2)}\n`;
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=`xolo-costs-${new Date().toISOString().split('T')[0]}.csv`;link.click();
 }
 </script>
