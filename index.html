@@ -263,6 +263,16 @@ h1 em {
   border-color: rgba(124,92,255,.4);
   box-shadow: 0 0 20px rgba(124,92,255,.2), inset 0 1px 0 rgba(255,255,255,.08);
 }
+.tab-summary {
+  border-right: 1px solid var(--border-glass);
+  margin-right: .4rem;
+  padding-right: 1.2rem;
+}
+.tab-summary .tab-label {
+  background: linear-gradient(135deg, #7c5cff, #22d3ee);
+  color: #fff;
+  font-weight: 700;
+}
 .tab-label {
   font-size: .68rem;
   color: var(--muted);
@@ -745,6 +755,7 @@ const MODEL_PALETTE = [
    ═══════════════════════════════════════════════ */
 const STATE = {
   rawByXolo: new Map(),
+  transcriptsByXolo: new Map(), // grade -> [transcript items]
   modelColors: new Map(),
   dateRange: { start: null, end: null },
   activeTab: null,
@@ -946,24 +957,30 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const tabs = $("tabs");
-  tabs.innerHTML = XOLOS.map(x => `
+  const xoloTabs = XOLOS.map(x => `
     <button class="tab" data-grade="${x.grade}" onclick="switchTab(${x.grade})">
       <span class="tab-label">${x.grade}°</span>Xolo ${x.grade}
     </button>
   `).join("");
+  tabs.innerHTML = `
+    <button class="tab tab-summary" data-grade="summary" onclick="switchTab('summary')">
+      <span class="tab-label">∑</span>Resumen
+    </button>
+    ${xoloTabs}
+  `;
 });
 
 /* ═══════════════════════════════════════════════
    FETCH
    ═══════════════════════════════════════════════ */
-async function fetchPages(xolo, startTime, endTime) {
+async function fetchPages(xolo, startTime, endTime, queryName = "credit_usage") {
   const all = [];
   let cursor = null;
   let page = 0;
   while (page < 50) {
     const body = {
       data: {
-        name: "credit_usage",
+        name: queryName,
         filter: { projectID: xolo.id, startTime, endTime, limit: 500 }
       }
     };
@@ -1020,18 +1037,27 @@ async function loadAll() {
 
   const errors = [];
 
+  STATE.transcriptsByXolo.clear();
+
   try {
     for (let i = 0; i < XOLOS.length; i++) {
       const x = XOLOS[i];
       showLoader("Consultando VoiceFlow", `${i + 1}/${XOLOS.length} · Grado ${x.grade}°`);
       try {
-        const items = await fetchPages(x, startTime, endTime);
+        // Fetch credit_usage + transcripts in parallel for this xolo
+        const [items, transcripts] = await Promise.all([
+          fetchPages(x, startTime, endTime, "credit_usage"),
+          fetchPages(x, startTime, endTime, "transcripts"),
+        ]);
         STATE.rawByXolo.set(x.grade, items);
+        STATE.transcriptsByXolo.set(x.grade, transcripts);
 
         // Diagnostic: log the shape of the first item per xolo
         if (items.length > 0) {
-          console.log(`[${x.name}] ${items.length} items. Sample:`, items[0]);
+          console.log(`[${x.name}] ${items.length} credit_usage items. Sample:`, items[0]);
         }
+        const transcriptTotal = transcripts.reduce((s, t) => s + (t.count || 0), 0);
+        console.log(`[${x.name}] ${transcripts.length} transcript rows, total conversations: ${transcriptTotal}`);
 
         // Assign colors based on each item's classified modelKey (chat, voice, or LLM model name)
         const totals = new Map();
@@ -1045,11 +1071,12 @@ async function loadAll() {
         console.error(`Error ${x.name}:`, err);
         errors.push(`${x.grade}°`);
         STATE.rawByXolo.set(x.grade, []);
+        STATE.transcriptsByXolo.set(x.grade, []);
       }
     }
 
     $("dateRangeLabel").textContent = `${fmtDateShort(startDate)} → ${fmtDateShort(endDate)}`;
-    switchTab(STATE.activeTab || XOLOS[0].grade);
+    switchTab(STATE.activeTab || "summary");
     setStatus(errors.length ? "err" : "", errors.length ? `Errores en: ${errors.join(", ")}` : "Datos cargados");
   } catch (err) {
     console.error(err);
@@ -1065,17 +1092,130 @@ async function loadAll() {
    TABS
    ═══════════════════════════════════════════════ */
 function switchTab(grade) {
+/* Count total conversations (transcripts) for a xolo in the current range.
+   Each transcript row's count represents the number of distinct conversations
+   for that period. */
+function countConversations(grade) {
+  const transcripts = STATE.transcriptsByXolo.get(grade) || [];
+  return transcripts.reduce((s, t) => s + (t.count || 0), 0);
+}
+
+/* Compute aggregate summary for one xolo — used by both per-xolo tabs and the global summary tab. */
+function computeXoloSummary(grade) {
+  const items = STATE.rawByXolo.get(grade) || [];
+  let totalCredits = 0;
+  items.forEach(it => { totalCredits += itemToCredits(it); });
+  const totalUSD = totalCredits * USD_PER_CREDIT;
+  const conversations = countConversations(grade);
+  const costPerConv = conversations > 0 ? totalUSD / conversations : 0;
+  return { totalCredits, totalUSD, conversations, costPerConv, hasData: items.length > 0 };
+}
+
+function switchTab(grade) {
   STATE.activeTab = grade;
   document.querySelectorAll(".tab").forEach(t => {
-    t.classList.toggle("active", parseInt(t.dataset.grade) === grade);
+    t.classList.toggle("active", t.dataset.grade === String(grade));
   });
-  renderXolo(grade);
+  if (grade === "summary") {
+    renderSummary();
+  } else {
+    renderXolo(grade);
+  }
 }
 
 /* ═══════════════════════════════════════════════
-   RENDER
+   RENDER — SUMMARY TAB (global comparison across xolos)
    ═══════════════════════════════════════════════ */
-function renderXolo(grade) {
+function renderSummary() {
+  const content = $("content");
+
+  // Compute per-xolo summaries
+  const summaries = XOLOS.map(x => ({ xolo: x, ...computeXoloSummary(x.grade) }));
+  const anyData = summaries.some(s => s.hasData);
+
+  if (!anyData) {
+    content.innerHTML = `<div class="empty glass"><div class="empty-icon">◌</div>Sin datos. Presiona <strong style="color:var(--ink)">Cargar datos</strong>.</div>`;
+    return;
+  }
+
+  // Global aggregates
+  const grandTotalUSD = summaries.reduce((s, x) => s + x.totalUSD, 0);
+  const grandConversations = summaries.reduce((s, x) => s + x.conversations, 0);
+  const grandCostPerConv = grandConversations > 0 ? grandTotalUSD / grandConversations : 0;
+
+  // Find extremes for ranking
+  const withData = summaries.filter(s => s.conversations > 0);
+  const maxCPC = withData.length ? Math.max(...withData.map(s => s.costPerConv)) : 0;
+  const minCPC = withData.length ? Math.min(...withData.map(s => s.costPerConv)) : 0;
+  const maxTotal = Math.max(...summaries.map(s => s.totalUSD));
+
+  // Build comparison rows
+  const rowsHtml = summaries.map(s => {
+    const barPct = maxTotal > 0 ? (s.totalUSD / maxTotal) * 100 : 0;
+    const cpcColor =
+      s.conversations === 0 ? "var(--muted)" :
+      s.costPerConv === maxCPC ? "var(--rose)" :
+      s.costPerConv === minCPC ? "var(--green)" :
+      "var(--ink)";
+    return `
+      <tr>
+        <td><strong style="color:var(--ink)">Xolo ${s.xolo.grade}</strong></td>
+        <td class="right">${fmtNum(s.conversations)}</td>
+        <td class="right">$${fmtNum(s.totalUSD, 2)}</td>
+        <td class="right" style="color:${cpcColor};font-weight:600">
+          ${s.conversations > 0 ? "$" + fmtNum(s.costPerConv, 4) : "—"}
+        </td>
+        <td class="bar-cell" style="min-width:160px">
+          <div class="bar-fill" style="margin-top:0"><div class="bar-fill-inner" style="width:${barPct}%;background:linear-gradient(90deg, #7c5cff, #22d3ee);box-shadow:0 0 8px rgba(124,92,255,.4)"></div></div>
+        </td>
+      </tr>`;
+  }).join("");
+
+  content.innerHTML = `
+    <section class="stats">
+      <div class="stat glass">
+        <div class="stat-label"><span class="lbl-icon"></span>Costo Total (Todos)</div>
+        <div class="stat-value accent">$${fmtNum(grandTotalUSD, 2)}</div>
+        <div class="stat-sub">${XOLOS.length} Xolos · ${fmtDateShort(STATE.dateRange.start)} → ${fmtDateShort(STATE.dateRange.end)}</div>
+      </div>
+      <div class="stat glass">
+        <div class="stat-label"><span class="lbl-icon" style="background:#a78bfa;box-shadow:0 0 6px #a78bfa"></span>Total Conversaciones</div>
+        <div class="stat-value">${fmtNum(grandConversations)}</div>
+        <div class="stat-sub">sumado en todos los grados</div>
+      </div>
+      <div class="stat glass">
+        <div class="stat-label"><span class="lbl-icon" style="background:var(--gold);box-shadow:0 0 6px var(--gold)"></span>Costo / Conversación (Global)</div>
+        <div class="stat-value">${grandConversations > 0 ? "$" + fmtNum(grandCostPerConv, 4) : "—"}</div>
+        <div class="stat-sub">promedio ponderado</div>
+      </div>
+    </section>
+
+    <div class="breakdown-card glass">
+      <div class="breakdown-head">
+        <div class="breakdown-title">Comparativo por <em>Xolo</em></div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.35rem;font-family:var(--font-mono)">
+          verde = más barato por conversación · rojo = más caro por conversación
+        </div>
+      </div>
+      <div class="breakdown-table-wrap">
+        <table class="breakdown-table">
+          <thead>
+            <tr>
+              <th>Xolo</th>
+              <th class="right">Conversaciones</th>
+              <th class="right">Total USD</th>
+              <th class="right">$ / Conversación</th>
+              <th>Participación del gasto</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+
   const xolo = XOLOS.find(x => x.grade === grade);
   const items = STATE.rawByXolo.get(grade);
   const content = $("content");
@@ -1198,6 +1338,8 @@ function renderXolo(grade) {
   const avgUSD = avg * USD_PER_CREDIT;
   const maxUSD = max * USD_PER_CREDIT;
   const minUSD = min * USD_PER_CREDIT;
+  const conversations = countConversations(grade);
+  const costPerConv = conversations > 0 ? totalUSD / conversations : 0;
 
   content.innerHTML = `
     <section class="stats">
@@ -1205,6 +1347,16 @@ function renderXolo(grade) {
         <div class="stat-label"><span class="lbl-icon"></span>Total del Rango</div>
         <div class="stat-value accent">$${fmtNum(totalUSD, 2)}</div>
         <div class="stat-sub">${activeDays.length} días con uso en ${days.length} días</div>
+      </div>
+      <div class="stat glass">
+        <div class="stat-label"><span class="lbl-icon" style="background:#a78bfa;box-shadow:0 0 6px #a78bfa"></span>Conversaciones</div>
+        <div class="stat-value">${fmtNum(conversations)}</div>
+        <div class="stat-sub">sesiones completas (transcripts)</div>
+      </div>
+      <div class="stat glass">
+        <div class="stat-label"><span class="lbl-icon" style="background:var(--gold);box-shadow:0 0 6px var(--gold)"></span>Costo / Conversación</div>
+        <div class="stat-value">${conversations > 0 ? "$" + fmtNum(costPerConv, 4) : "—"}</div>
+        <div class="stat-sub">${conversations > 0 ? "promedio por sesión" : "sin conversaciones en el rango"}</div>
       </div>
       <div class="stat glass">
         <div class="stat-label"><span class="lbl-icon" style="background:var(--accent-2);box-shadow:0 0 6px var(--accent-2)"></span>Media Diaria</div>
